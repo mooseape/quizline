@@ -10,7 +10,7 @@ export function RulesOverlay({ onClose }: Props) {
         <ul>
           <li>10 questions, 15 seconds each.</li>
           <li>Play now uses your last category, or today’s mix.</li>
-          <li>Vs a bot or a friend, the screen splits: you on top, them below.</li>
+          <li>Challenge a friend sends a live 1v1 link — no accounts. Same-device play is still in opponent select.</li>
           <li>Faster correct answers score more. Streaks add a bonus.</li>
         </ul>
         <button type="button" className="primary" onClick={onClose}>

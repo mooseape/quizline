@@ -30,12 +30,13 @@ function todayKey() {
   return `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`
 }
 
-export function dealMatch(category: Category): PlayQuestion[] {
-  const pool = category.id === 'mix' ? seededShuffle(category.questions, `mix-${todayKey()}`) : shuffle(category.questions)
+export function dealMatch(category: Category, seed?: string): PlayQuestion[] {
+  const poolSeed = seed ?? (category.id === 'mix' ? `mix-${todayKey()}` : undefined)
+  const pool = poolSeed ? seededShuffle(category.questions, poolSeed) : shuffle(category.questions)
 
   return pool.slice(0, QUESTIONS_PER_MATCH).map((question) => {
     const indexed = question.choices.map((text, index) => ({ text, index }))
-    const shuffled = shuffle(indexed)
+    const shuffled = poolSeed ? seededShuffle(indexed, `${poolSeed}-${question.id}`) : shuffle(indexed)
     return {
       id: question.id,
       prompt: question.prompt,

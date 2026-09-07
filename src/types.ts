@@ -25,10 +25,12 @@ export type Opponent =
   | { kind: 'solo' }
   | { kind: 'bot'; botId: string }
   | { kind: 'local' }
+  | { kind: 'online'; roomId: string; role: 'host' | 'guest'; friendName: string }
 
 export type Screen =
   | { name: 'home' }
   | { name: 'opponent'; categoryId: CategoryId }
+  | { name: 'lobby'; categoryId: CategoryId; code: string; role: 'host' | 'guest' }
   | { name: 'match'; categoryId: CategoryId; opponent: Opponent }
   | {
       name: 'result'

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { applyTheme, readTheme, saveTheme, type Theme } from '../lib/theme'
 
-export function ThemeToggle({ compact = false }: { compact?: boolean }) {
+export function ThemeToggle({ compact = false, floating = false }: { compact?: boolean; floating?: boolean }) {
   const [theme, setTheme] = useState<Theme>(() =>
     typeof document === 'undefined' ? 'light' : readTheme(),
   )
@@ -16,7 +16,11 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
   }
 
   return (
-    <div className={`theme-widget${compact ? ' is-compact' : ''}`} role="group" aria-label="Color theme">
+    <div
+      className={`theme-widget${compact ? ' is-compact' : ''}${floating ? ' is-floating' : ''}`}
+      role="group"
+      aria-label="Color theme"
+    >
       <button
         type="button"
         className={theme === 'light' ? 'is-on' : ''}
