@@ -15,7 +15,7 @@ export function OpponentSelect({ categoryId, onBack, onStart }: Props) {
     <main className="panel">
       <p className="eyebrow">{category?.name ?? 'Category'}</p>
       <h1>Pick an opponent</h1>
-      <p className="lede">Same split-screen for a bot or a friend on this device.</p>
+      <p className="lede">Bots, same-device, or a live 1v1 link — still no accounts.</p>
       <ul className="categories">
         {bots.map((bot) => (
           <li key={bot.id}>
@@ -33,6 +33,14 @@ export function OpponentSelect({ categoryId, onBack, onStart }: Props) {
             </button>
           </li>
         ))}
+        <li>
+          <button type="button" className="category" onClick={() => onStart({ kind: 'online', roomId: '', role: 'host', friendName: 'Friend' })}>
+            <span>
+              <strong>Friend · Live 1v1</strong>
+              <em>Send a link. They play on their own phone — no sign-in.</em>
+            </span>
+          </button>
+        </li>
         <li>
           <button type="button" className="category" onClick={() => onStart({ kind: 'local' })}>
             <span>

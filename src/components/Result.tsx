@@ -28,7 +28,9 @@ function formatPts(value: number) {
 
 function opponentMeta(opponent: Opponent) {
   if (opponent.kind === 'solo') return { name: 'Practice', hue: '#64748b' }
-  if (opponent.kind === 'local') return { name: 'Friend', hue: '#0ea5e9' }
+  if (opponent.kind === 'local' || opponent.kind === 'online') {
+    return { name: opponent.kind === 'online' ? opponent.friendName || 'Friend' : 'Friend', hue: '#0ea5e9' }
+  }
   const bot = getBot(opponent.botId)
   return { name: bot?.name ?? 'Bot', hue: bot?.hue ?? '#ec4899' }
 }

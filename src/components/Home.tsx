@@ -11,6 +11,7 @@ import {
   markRulesSeen,
 } from '../lib/storage'
 import type { CategoryId, Opponent } from '../types'
+import { parseInvite } from '../lib/invite'
 import { Avatar } from './Avatar'
 import { RulesOverlay } from './RulesOverlay'
 import { ThemeToggle } from './ThemeToggle'
@@ -26,6 +27,7 @@ const topics: { id: CategoryId; label: string }[] = [
 type Props = {
   onPlay: (categoryId: CategoryId) => void
   onChallengeFriend: (categoryId: CategoryId) => void
+  onJoinFriend: (code: string, categoryId: CategoryId) => void
   onChangeOpponent: (categoryId: CategoryId) => void
 }
 
@@ -44,7 +46,8 @@ function heroLine(categoryId: CategoryId, best: number, opponent: Opponent) {
     const bot = getBot(opponent.botId)
     return bot ? `${bot.name} is waiting` : 'Your opponent is waiting'
   }
-  if (opponent.kind === 'local') return 'Friend is on the bottom screen'
+  if (opponent.kind === 'local') return 'Friend is on this device'
+  if (opponent.kind === 'online') return 'Send a link — no accounts'
   return `First match in ${name}`
 }
 
@@ -61,6 +64,17 @@ function opponentView(opponent: Opponent) {
         hue: bot.hue,
         waiting: `${bot.name} is waiting`,
       }
+    }
+  }
+  if (opponent.kind === 'online') {
+    return {
+      name: opponent.friendName || 'Friend',
+      tag: 'Live 1v1',
+      rank: 'Guest',
+      points: 0,
+      bestTopic: 'Any topic',
+      hue: '#0ea5e9',
+      waiting: 'Share a link to start',
     }
   }
   if (opponent.kind === 'local') {
@@ -85,9 +99,11 @@ function opponentView(opponent: Opponent) {
   }
 }
 
-export function Home({ onPlay, onChallengeFriend, onChangeOpponent }: Props) {
+export function Home({ onPlay, onChallengeFriend, onJoinFriend, onChangeOpponent }: Props) {
   const [categoryId, setCategoryId] = useState<CategoryId>(getLastCategory)
   const opponent = getLastOpponent()
+  const [joinCode, setJoinCode] = useState('')
+  const [joinError, setJoinError] = useState('')
   const [showRules, setShowRules] = useState(false)
   const streak = getPlayStreak()
   const bests = useMemo(
@@ -146,6 +162,33 @@ export function Home({ onPlay, onChallengeFriend, onChangeOpponent }: Props) {
               Challenge a friend
             </button>
           </div>
+          <form
+            className="join-row"
+            onSubmit={(event) => {
+              event.preventDefault()
+              const invite = parseInvite(joinCode)
+              if (!invite) {
+                setJoinError('Use the 6-character code from their link.')
+                return
+              }
+              setJoinError('')
+              onJoinFriend(invite.code, invite.categoryId)
+            }}
+          >
+            <input
+              className="lobby-input"
+              value={joinCode}
+              onChange={(event) => setJoinCode(event.target.value.toUpperCase())}
+              placeholder="Have a code?"
+              autoComplete="off"
+              spellCheck={false}
+              aria-label="Friend room code"
+            />
+            <button type="submit" className="ghost">
+              Join
+            </button>
+          </form>
+          {joinError ? <p className="lobby-error">{joinError}</p> : null}
         </article>
 
         <article className="opponent-card">
