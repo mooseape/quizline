@@ -10,19 +10,12 @@ import { safeMediaUrl } from '../lib/safeUrl'
 import { Avatar } from './Avatar'
 import { QrCode } from './QrCode'
 import type { CategoryId, PaceMode } from '../types'
+import { TOPIC_HUE } from '../lib/topics'
 
 const TOPICS: { id: CategoryId; label: string }[] = [
   { id: 'mix', label: 'Daily Mix' },
   ...categories.map((category) => ({ id: category.id, label: category.name })),
 ]
-
-const TOPIC_HUE: Record<CategoryId, string> = {
-  mix: '#ff2d6a',
-  general: '#e39b00',
-  science: '#0ea5a0',
-  history: '#e86a00',
-  pop: '#6d3dff',
-}
 
 function prettyCode(code: string) {
   const clean = code.replace(/[^A-Za-z0-9]/g, '').toUpperCase()

@@ -1,5 +1,7 @@
 import type { CategoryId, Opponent, PaceMode } from '../types'
+import { isPaceMode } from './game'
 import { bots } from '../data/bots'
+import { isCategoryId } from './topics'
 
 const key = (categoryId: CategoryId) => `quizline-best-${categoryId}`
 const LAST_CATEGORY = 'quizline-last-category'
@@ -22,9 +24,7 @@ export function saveBestScore(categoryId: CategoryId, score: number): number {
 
 export function getLastCategory(): CategoryId {
   const raw = localStorage.getItem(LAST_CATEGORY)
-  if (raw === 'mix' || raw === 'general' || raw === 'science' || raw === 'history' || raw === 'pop') {
-    return raw
-  }
+  if (isCategoryId(raw)) return raw
   return 'mix'
 }
 
@@ -53,8 +53,8 @@ const LAST_PACE = 'quizline-last-pace'
 
 export function getLastPace(): PaceMode {
   const raw = localStorage.getItem(LAST_PACE)
-  if (raw === 'blitz' || raw === 'rapid' || raw === 'normal') return raw
-  return 'normal'
+  if (isPaceMode(raw)) return raw
+  return 'rapid'
 }
 
 export function saveLastPace(pace: PaceMode) {

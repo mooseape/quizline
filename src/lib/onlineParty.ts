@@ -1,9 +1,10 @@
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { presenceProfile } from './account'
-import { QUESTIONS_PER_MATCH } from './game'
+import { QUESTIONS_PER_MATCH, coercePace, isPaceMode } from './game'
 import { safeMediaUrl } from './safeUrl'
 import { ensureAnonSession, getSupabase, isSupabaseConfigured, missingSupabaseMessage } from './supabase'
 import type { CategoryId, PaceMode, PartyPlayer } from '../types'
+import { isCategoryId } from './topics'
 
 export type PartyBody =
   | { t: 'hello'; id: string; name: string; avatar?: string; photo?: string }
@@ -43,10 +44,15 @@ function isPartyMsg(value: unknown): value is PartyMsg {
   if (!value || typeof value !== 'object' || !('t' in value) || !('from' in value)) return false
   const msg = value as PartyMsg
   if (typeof msg.from !== 'string' || !msg.from || msg.from.length > 80) return false
-  if (msg.t === 'setup') return isCategoryId(msg.categoryId) && isPace(msg.pace)
+  if (msg.t === 'setup') {
+    if (!isCategoryId(msg.categoryId)) return false
+    msg.pace = coercePace(msg.pace)
+    return true
+  }
   if (msg.t === 'begin') {
     const categoryOk = msg.categoryId == null || isCategoryId(msg.categoryId)
-    const paceOk = msg.pace == null || isPace(msg.pace)
+    if (msg.pace != null) msg.pace = coercePace(msg.pace)
+    const paceOk = msg.pace == null || isPaceMode(msg.pace)
     return categoryOk && paceOk && typeof msg.round === 'number' && typeof msg.at === 'number'
   }
   if (msg.t === 'pick') return typeof msg.id === 'string' && msg.id === msg.from
@@ -64,14 +70,6 @@ function emit(msg: PartyMsg) {
   }
   if (listeners.size === 0) inbox.push(msg)
   listeners.forEach((listener) => listener(msg))
-}
-
-function isCategoryId(value: unknown): value is CategoryId {
-  return value === 'mix' || value === 'general' || value === 'science' || value === 'history' || value === 'pop'
-}
-
-function isPace(value: unknown): value is PaceMode {
-  return value === 'blitz' || value === 'rapid' || value === 'normal'
 }
 
 function flushSend() {

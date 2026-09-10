@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { AVATAR_PACK } from '../lib/avatars'
 import { compressPhoto } from '../lib/account'
+import { assertSafePhoto } from '../lib/moderation'
+import { COUNTRIES } from '../data/countries'
 import { isSupabaseConfigured } from '../lib/supabase'
 import { useAccount } from '../lib/AccountContext'
 import { Avatar } from './Avatar'
@@ -28,6 +30,7 @@ export function AccountSheet({ onClose }: Props) {
     setError('')
     try {
       const dataUrl = await compressPhoto(file)
+      await assertSafePhoto(dataUrl)
       account.setPhotoUrl(dataUrl)
     } catch {
       setError('Could not use that photo. Try a JPG or PNG.')
@@ -73,7 +76,14 @@ export function AccountSheet({ onClose }: Props) {
               value={account.name}
               maxLength={16}
               placeholder="You"
-              onChange={(event) => account.setName(event.target.value)}
+              onChange={(event) => {
+                try {
+                  account.setName(event.target.value)
+                  setError('')
+                } catch (reason) {
+                  setError(reason instanceof Error ? reason.message : 'That name isn’t allowed.')
+                }
+              }}
             />
           </label>
         </div>
@@ -100,6 +110,22 @@ export function AccountSheet({ onClose }: Props) {
               />
             </label>
             <p className="waiting-line">Friends add you with this tag.</p>
+            <label className="lobby-label" htmlFor="account-country">
+              Country
+              <select
+                id="account-country"
+                className="lobby-input"
+                value={account.country}
+                onChange={(event) => account.setCountry(event.target.value)}
+              >
+                <option value="">Choose a country</option>
+                {COUNTRIES.map((item) => (
+                  <option key={item.code} value={item.code}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </label>
           </>
         ) : null}
 

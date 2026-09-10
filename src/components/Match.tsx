@@ -13,7 +13,7 @@ type Props = {
   onFinish: (score: number, correct: number) => void
 }
 
-export function Match({ categoryId, pace = 'normal', onQuit, onFinish }: Props) {
+export function Match({ categoryId, pace = 'rapid', onQuit, onFinish }: Props) {
   const questionSeconds = secondsForPace(pace)
   const category = getCategory(categoryId)
   const deck = useMemo(() => (category ? dealMatch(category) : []), [categoryId])

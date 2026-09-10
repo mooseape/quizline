@@ -1,6 +1,6 @@
-export type PaceMode = 'blitz' | 'rapid' | 'normal'
+export type PaceMode = 'bullet' | 'blitz' | 'rapid'
 
-export type CategoryId = 'mix' | 'general' | 'science' | 'history' | 'pop'
+export type CategoryId = 'mix' | 'general' | 'science' | 'history' | 'pop' | 'math' | 'geography' | 'sports'
 
 export type QuestionDifficulty = 'easy' | 'medium' | 'hard'
 
@@ -44,11 +44,12 @@ export type Opponent =
   | { kind: 'solo' }
   | { kind: 'bot'; botId: string }
   | { kind: 'local' }
-  | { kind: 'online'; roomId: string; role: 'host' | 'guest'; friendName: string; friendAvatar?: string; friendPhoto?: string }
+  | { kind: 'online'; roomId: string; role: 'host' | 'guest'; friendName: string; friendAvatar?: string; friendPhoto?: string; ranked?: boolean; opponentId?: string }
 
 export type Screen =
   | { name: 'home' }
   | { name: 'opponent'; categoryId: CategoryId }
+  | { name: 'ranked-queue'; categoryId: CategoryId; pace: PaceMode }
   | { name: 'lobby'; categoryId: CategoryId; code: string; role: 'host' | 'guest'; pace: PaceMode; round: number }
   | { name: 'match'; categoryId: CategoryId; opponent: Opponent; pace: PaceMode; round?: number; goAt?: number }
   | {

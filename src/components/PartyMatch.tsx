@@ -11,6 +11,7 @@ import {
 } from '../lib/game'
 import { clearPartyBegin, getPartyRoom, isPartyHostSender, isPartySeat, partySelfId } from '../lib/onlineParty'
 import type { CategoryId, PaceMode, PartyPlayer, PartyStanding } from '../types'
+import { TOPIC_HUE } from '../lib/topics'
 import { Avatar } from './Avatar'
 import { HalfGlow } from './HalfGlow'
 import { MatchCountdown } from './MatchCountdown'
@@ -37,14 +38,6 @@ type Props = {
   goAt: number
   onQuit: () => void
   onFinish: (standings: PartyStanding[]) => void
-}
-
-const TOPIC_HUE: Record<CategoryId, string> = {
-  mix: '#ff2d6a',
-  general: '#e39b00',
-  science: '#0ea5a0',
-  history: '#e86a00',
-  pop: '#6d3dff',
 }
 
 const HUES = ['#ff2d6a', '#0ea5e9', '#e39b00', '#6d3dff', '#0ea5a0', '#e86a00', '#ec4899', '#22c55e']
@@ -288,7 +281,7 @@ export function PartyMatch({
         </button>
         <p className="topic-chip">{category.name}</p>
         <p className="topic-chip ghost-chip">Party</p>
-        {pace !== 'normal' ? <p className="topic-chip ghost-chip">{PACE_LABEL[pace]}</p> : null}
+        {pace !== 'rapid' ? <p className="topic-chip ghost-chip">{PACE_LABEL[pace]}</p> : null}
         <div className="q-progress" aria-label={`Question ${index + 1} of ${QUESTIONS_PER_MATCH}`}>
           {Array.from({ length: QUESTIONS_PER_MATCH }, (_, i) => (
             <span key={i} className={i === index ? 'is-now' : i < index ? 'is-done' : ''} />

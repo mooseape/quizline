@@ -802,6 +802,24 @@ export const categories: Category[] = [
       ...extraById.pop,
     ],
   },
+  {
+    id: 'math',
+    name: 'Math',
+    blurb: 'Numbers, shapes, and logic',
+    questions: extraById.math,
+  },
+  {
+    id: 'geography',
+    name: 'Geography',
+    blurb: 'Places, maps, and Earth',
+    questions: extraById.geography,
+  },
+  {
+    id: 'sports',
+    name: 'Sports',
+    blurb: 'Games, scores, and champions',
+    questions: extraById.sports,
+  },
 ]
 
 const mixCategory = {

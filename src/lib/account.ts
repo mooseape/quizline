@@ -3,10 +3,13 @@ import { getHandle, handleOrYou, saveHandle } from './handle'
 import { parseAvatarId, type AvatarId } from './avatars'
 import { getSupabase } from './supabase'
 import { safeMediaUrl } from './safeUrl'
+import { assertCleanDisplayName, assertCleanUsername } from './moderation'
+import { getCurrentUserId } from './sessionUser'
 
 const AVATAR_KEY = 'quizline-avatar'
 const PHOTO_KEY = 'quizline-photo'
 const USERNAME_KEY = 'quizline-username'
+const COUNTRY_KEY = 'quizline-country'
 const listeners = new Set<() => void>()
 
 export type AccountSnapshot = {
@@ -14,6 +17,7 @@ export type AccountSnapshot = {
   username: string
   avatarId: AvatarId
   photoUrl: string | null
+  country: string
 }
 
 export function getAvatarId(): AvatarId {
@@ -35,8 +39,27 @@ export function getUsername() {
   return normalizeUsername(localStorage.getItem(USERNAME_KEY) ?? '')
 }
 
+export function getCountry() {
+  const raw = (localStorage.getItem(COUNTRY_KEY) ?? '').toUpperCase()
+  return /^[A-Z]{2}$/.test(raw) ? raw : ''
+}
+
+export function saveCountry(code: string) {
+  const next = code.trim().toUpperCase()
+  if (next === getCountry()) return
+  if (/^[A-Z]{2}$/.test(next)) localStorage.setItem(COUNTRY_KEY, next)
+  else localStorage.removeItem(COUNTRY_KEY)
+  notify()
+}
+
 export function getAccountSnapshot(): AccountSnapshot {
-  return { name: getHandle(), username: getUsername(), avatarId: getAvatarId(), photoUrl: getPhotoUrl() }
+  return {
+    name: getHandle(),
+    username: getUsername(),
+    avatarId: getAvatarId(),
+    photoUrl: getPhotoUrl(),
+    country: getCountry(),
+  }
 }
 
 export function subscribeAccount(listener: () => void) {
@@ -64,6 +87,7 @@ export function savePhotoUrl(url: string | null) {
 }
 
 export function saveDisplayName(name: string) {
+  assertCleanDisplayName(name)
   const next = name.trim().slice(0, 16)
   if (next === getHandle()) return
   saveHandle(name)
@@ -110,6 +134,7 @@ export function presenceProfile(extra: Record<string, unknown> = {}) {
     name: handleOrYou(),
     avatar: getAvatarId(),
     photo: shareablePhoto(getPhotoUrl()),
+    uid: getCurrentUserId() || undefined,
     ...extra,
   }
 }
@@ -143,8 +168,10 @@ export async function pushAccountToCloud() {
   if (!user || user.is_anonymous) return
 
   const display_name = (getHandle() || 'You').slice(0, 16)
+  assertCleanDisplayName(display_name)
   const avatar_id = getAvatarId()
   const username = await claimUsername(getUsername() || display_name)
+  assertCleanUsername(username)
   saveUsername(username)
   let photo_url = shareablePhoto(getPhotoUrl()) ?? null
   const localPhoto = getPhotoUrl()
@@ -157,8 +184,10 @@ export async function pushAccountToCloud() {
     }
   }
 
+  const country = getCountry() || null
+
   await supabase.auth.updateUser({
-    data: { display_name, avatar_id, photo_url, username },
+    data: { display_name, avatar_id, photo_url, username, country },
   })
 
   await supabase.from('profiles').upsert({
@@ -167,6 +196,7 @@ export async function pushAccountToCloud() {
     username,
     avatar_id,
     photo_url,
+    country,
     updated_at: new Date().toISOString(),
   })
 }
@@ -178,19 +208,21 @@ export async function hydrateCloudProfile(user: User | null) {
   if (!supabase) return
   const { data } = await supabase
     .from('profiles')
-    .select('username, display_name, avatar_id, photo_url')
+    .select('username, display_name, avatar_id, photo_url, country')
     .eq('id', user.id)
     .maybeSingle()
   if (data?.username) saveUsername(data.username)
   if (data?.display_name) saveDisplayName(data.display_name)
   if (typeof data?.avatar_id === 'string') saveAvatarId(parseAvatarId(data.avatar_id))
   if (typeof data?.photo_url === 'string') savePhotoUrl(safeMediaUrl(data.photo_url) ?? null)
+  if (typeof data?.country === 'string' && /^[A-Z]{2}$/i.test(data.country)) saveCountry(data.country.toUpperCase())
   if (!data?.username) await pushAccountToCloud()
 }
 
 export async function saveUsernameAndSync(raw: string) {
   const next = normalizeUsername(raw)
   if (next.length < 3) throw new Error('Tags need 3–16 letters, numbers, or underscores.')
+  assertCleanUsername(next)
   const supabase = getSupabase()
   if (supabase) {
     const { data } = await supabase.auth.getSession()

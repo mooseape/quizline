@@ -261,3 +261,195 @@ $$;
 
 revoke all on function public.lookup_profile_by_username(text) from public, anon;
 grant execute on function public.lookup_profile_by_username(text) to authenticated;
+
+-- Ranked randoms + leaderboards (safe to re-run)
+
+alter table public.profiles add column if not exists country text;
+
+create table if not exists public.ranked_stats (
+  user_id uuid primary key references public.profiles (id) on delete cascade,
+  wins integer not null default 0,
+  points integer not null default 0,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.ranked_stats enable row level security;
+
+create table if not exists public.ranked_matches (
+  code text primary key,
+  player_low uuid not null,
+  player_high uuid not null,
+  score_low integer,
+  score_high integer,
+  category_id text not null,
+  pace text not null,
+  applied boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+alter table public.ranked_matches enable row level security;
+
+create or replace function public.report_ranked_result(
+  p_code text,
+  p_opponent uuid,
+  p_my_score integer,
+  p_their_score integer,
+  p_category text,
+  p_pace text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  me uuid := auth.uid();
+  low_id uuid;
+  high_id uuid;
+  my_low boolean;
+  rec public.ranked_matches%rowtype;
+  low_pts integer;
+  high_pts integer;
+begin
+  if not public.is_email_user() then
+    raise exception 'Sign in required';
+  end if;
+  if me is null or p_opponent is null or me = p_opponent then
+    raise exception 'Invalid opponent';
+  end if;
+  if p_code is null or length(p_code) < 6 or length(p_code) > 24 then
+    raise exception 'Invalid match';
+  end if;
+
+  low_id := least(me, p_opponent);
+  high_id := greatest(me, p_opponent);
+  my_low := me = low_id;
+
+  insert into public.ranked_matches as rm (code, player_low, player_high, score_low, score_high, category_id, pace)
+  values (
+    p_code,
+    low_id,
+    high_id,
+    case when my_low then greatest(0, p_my_score) else greatest(0, p_their_score) end,
+    case when my_low then greatest(0, p_their_score) else greatest(0, p_my_score) end,
+    coalesce(p_category, 'mix'),
+    coalesce(p_pace, 'rapid')
+  )
+  on conflict (code) do update
+    set score_low = case
+          when my_low then excluded.score_low
+          else rm.score_low
+        end,
+        score_high = case
+          when not my_low then excluded.score_high
+          else rm.score_high
+        end
+    where rm.applied = false
+      and rm.player_low = low_id
+      and rm.player_high = high_id;
+
+  select * into rec from public.ranked_matches where code = p_code;
+  if rec.applied or rec.score_low is null or rec.score_high is null then
+    return;
+  end if;
+
+  update public.ranked_matches set applied = true where code = p_code and applied = false;
+  if not found then
+    return;
+  end if;
+
+  insert into public.ranked_stats (user_id, wins, points)
+  values (rec.player_low, 0, 0)
+  on conflict (user_id) do nothing;
+  insert into public.ranked_stats (user_id, wins, points)
+  values (rec.player_high, 0, 0)
+  on conflict (user_id) do nothing;
+
+  low_pts := rec.score_low;
+  high_pts := rec.score_high;
+
+  update public.ranked_stats
+    set points = points + low_pts,
+        wins = wins + case when low_pts > high_pts then 1 else 0 end,
+        updated_at = now()
+    where user_id = rec.player_low;
+
+  update public.ranked_stats
+    set points = points + high_pts,
+        wins = wins + case when high_pts > low_pts then 1 else 0 end,
+        updated_at = now()
+    where user_id = rec.player_high;
+end;
+$$;
+
+revoke all on function public.report_ranked_result(text, uuid, integer, integer, text, text) from public, anon;
+grant execute on function public.report_ranked_result(text, uuid, integer, integer, text, text) to authenticated;
+
+create or replace function public.leaderboard_rows(kind text, country_code text)
+returns table (
+  user_id uuid,
+  display_name text,
+  username text,
+  avatar_id text,
+  photo_url text,
+  country text,
+  wins integer,
+  points integer,
+  rank bigint
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with pool as (
+    select
+      s.user_id,
+      p.display_name,
+      p.username,
+      p.avatar_id,
+      p.photo_url,
+      p.country,
+      s.wins,
+      s.points
+    from public.ranked_stats s
+    join public.profiles p on p.id = s.user_id
+    where public.is_email_user()
+      and (s.wins > 0 or s.points > 0)
+      and (
+        kind = 'global'
+        or (kind = 'national' and country_code is not null and p.country = country_code)
+        or (
+          kind = 'friends'
+          and (
+            s.user_id = auth.uid()
+            or exists (
+              select 1
+              from public.friendships f
+              where f.status = 'accepted'
+                and (
+                  (f.requester_id = auth.uid() and f.addressee_id = s.user_id)
+                  or (f.addressee_id = auth.uid() and f.requester_id = s.user_id)
+                )
+            )
+          )
+        )
+      )
+  )
+  select
+    pool.user_id,
+    pool.display_name,
+    pool.username,
+    pool.avatar_id,
+    pool.photo_url,
+    pool.country,
+    pool.wins,
+    pool.points,
+    rank() over (order by pool.wins desc, pool.points desc, pool.username asc)
+  from pool
+  order by wins desc, points desc, username asc
+  limit 100;
+$$;
+
+revoke all on function public.leaderboard_rows(text, text) from public, anon;
+grant execute on function public.leaderboard_rows(text, text) to authenticated;

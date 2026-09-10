@@ -15,6 +15,7 @@ import {
 } from '../lib/onlineParty'
 import { isSupabaseConfigured, missingSupabaseMessage } from '../lib/supabase'
 import type { CategoryId, PaceMode, PartyPlayer } from '../types'
+import { TOPIC_HUE } from '../lib/topics'
 import { Avatar } from './Avatar'
 
 const TOPICS: { id: CategoryId; label: string }[] = [
@@ -35,14 +36,6 @@ type Props = {
 
 const HUES = ['#ff2d6a', '#0ea5e9', '#e39b00', '#6d3dff', '#0ea5a0', '#e86a00', '#ec4899', '#22c55e']
 const HOST_HUE = '#e3b341'
-
-const TOPIC_HUE: Record<CategoryId, string> = {
-  mix: '#ff2d6a',
-  general: '#e39b00',
-  science: '#0ea5a0',
-  history: '#e86a00',
-  pop: '#6d3dff',
-}
 
 function hueFor(player: PartyPlayer) {
   if (player.host) return HOST_HUE

@@ -14,23 +14,17 @@ import {
 } from '../lib/storage'
 import type { CategoryId, Opponent, PaceMode } from '../types'
 import { parseInvite } from '../lib/invite'
+import { TOPIC_HUE } from '../lib/topics'
 import { AccountSheet } from './AccountSheet'
 import { Avatar } from './Avatar'
 import { FriendsPanel } from './FriendsPanel'
+import { RanksPanel } from './RanksPanel'
 import { RulesOverlay } from './RulesOverlay'
 import { ThemeToggle } from './ThemeToggle'
 import { TopicIcon } from './TopicIcon'
 import { useAccount } from '../lib/AccountContext'
 
 const SCORE_GOAL = 2500
-
-const TOPIC_HUE: Record<CategoryId, string> = {
-  mix: '#ff2d6a',
-  general: '#e39b00',
-  science: '#0ea5a0',
-  history: '#e86a00',
-  pop: '#6d3dff',
-}
 
 const topics: { id: CategoryId; label: string }[] = [
   { id: 'mix', label: 'Daily Mix' },
@@ -43,6 +37,7 @@ type Props = {
   onJoinFriend: (code: string, categoryId: CategoryId, pace: PaceMode) => void
   onParty: (categoryId: CategoryId, pace: PaceMode) => void
   onJoinParty: (code: string, categoryId: CategoryId, pace: PaceMode) => void
+  onPlayRandom: (categoryId: CategoryId, pace: PaceMode) => void
   onChangeOpponent: (categoryId: CategoryId) => void
 }
 
@@ -114,7 +109,7 @@ function opponentView(opponent: Opponent) {
   }
 }
 
-export function Home({ onPlay, onChallengeFriend, onJoinFriend, onParty, onJoinParty, onChangeOpponent }: Props) {
+export function Home({ onPlay, onChallengeFriend, onJoinFriend, onParty, onJoinParty, onPlayRandom, onChangeOpponent }: Props) {
   const account = useAccount()
   const [categoryId, setCategoryId] = useState<CategoryId>(getLastCategory)
   const opponent = getLastOpponent()
@@ -123,7 +118,7 @@ export function Home({ onPlay, onChallengeFriend, onJoinFriend, onParty, onJoinP
   const [joinError, setJoinError] = useState('')
   const [showRules, setShowRules] = useState(false)
   const [showAccount, setShowAccount] = useState(false)
-  const [homeTab, setHomeTab] = useState<'play' | 'friends'>('play')
+  const [homeTab, setHomeTab] = useState<'play' | 'friends' | 'ranks'>('play')
   const streak = getPlayStreak()
   const bests = useMemo(
     () => Object.fromEntries(topics.map((topic) => [topic.id, getBestScore(topic.id)])),
@@ -144,7 +139,7 @@ export function Home({ onPlay, onChallengeFriend, onJoinFriend, onParty, onJoinP
   }
 
   return (
-    <main className={`home${homeTab === 'friends' ? ' is-friends' : ''}`}>
+    <main className={`home${homeTab !== 'play' ? ' is-friends' : ''}`}>
       <header className="topbar">
         <div className="topbar-brand">
           <p className="logo">Quizline</p>
@@ -204,6 +199,19 @@ export function Home({ onPlay, onChallengeFriend, onJoinFriend, onParty, onJoinP
           <div className="hero-actions">
             <button type="button" className="play-cta" onClick={() => onPlay(categoryId, pace)}>
               Play now
+            </button>
+            <button
+              type="button"
+              className="challenge-btn"
+              onClick={() => {
+                if (!account.signedIn) {
+                  setShowAccount(true)
+                  return
+                }
+                onPlayRandom(categoryId, pace)
+              }}
+            >
+              Play vs random
             </button>
             <button type="button" className="challenge-btn" onClick={() => onChallengeFriend(categoryId, pace)}>
               Challenge a friend
@@ -317,11 +325,13 @@ export function Home({ onPlay, onChallengeFriend, onJoinFriend, onParty, onJoinP
         </ul>
       </section>
         </>
-      ) : (
+      ) : homeTab === 'friends' ? (
         <FriendsPanel
           onNeedAccount={() => setShowAccount(true)}
           onChallenge={() => onChallengeFriend(categoryId, pace)}
         />
+      ) : (
+        <RanksPanel onNeedAccount={() => setShowAccount(true)} />
       )}
 
       <nav className="home-tabs" aria-label="Home">
@@ -330,6 +340,9 @@ export function Home({ onPlay, onChallengeFriend, onJoinFriend, onParty, onJoinP
         </button>
         <button type="button" className={homeTab === 'friends' ? 'is-on' : ''} onClick={() => setHomeTab('friends')}>
           Friends
+        </button>
+        <button type="button" className={homeTab === 'ranks' ? 'is-on' : ''} onClick={() => setHomeTab('ranks')}>
+          Ranks
         </button>
       </nav>
 

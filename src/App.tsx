@@ -7,11 +7,13 @@ import { OpponentSelect } from './components/OpponentSelect'
 import { PartyLobby } from './components/PartyLobby'
 import { PartyMatch } from './components/PartyMatch'
 import { PartyResult } from './components/PartyResult'
+import { RandomQueue } from './components/RandomQueue'
 import { Result } from './components/Result'
 import { ThemeToggle } from './components/ThemeToggle'
 import { formatInvite, makeInviteToken, parseJoinHash, parsePartyHash, partyHash, playHash } from './lib/invite'
 import { closeDuelRoom, clearDuelHand, getDuelRoom } from './lib/onlineDuel'
 import { closePartyRoom } from './lib/onlineParty'
+import { recordRankedResult } from './lib/leaderboard'
 import { saveDuelResult } from './lib/saveDuel'
 import { handleOrYou } from './lib/handle'
 import { bumpPlayStreak, saveBestScore, saveLastCategory, saveLastOpponent, getLastOpponent, getBestScore, getLastPace, saveLastPace } from './lib/storage'
@@ -21,7 +23,7 @@ import './App.css'
 function initialScreen(): Screen {
   if (typeof window === 'undefined') return { name: 'home' }
   if (window.location.hash.startsWith('#preview-duel')) {
-    return { name: 'match', categoryId: 'pop', opponent: { kind: 'bot', botId: 'lina' }, pace: 'normal' }
+    return { name: 'match', categoryId: 'pop', opponent: { kind: 'bot', botId: 'lina' }, pace: 'rapid' }
   }
   const party = parsePartyHash(window.location.hash)
   if (party) {
@@ -147,6 +149,11 @@ function App() {
       onJoinFriend={startGuestLobby}
       onParty={startHostParty}
       onJoinParty={startGuestParty}
+      onPlayRandom={(categoryId, pace) => {
+        saveLastCategory(categoryId)
+        saveLastPace(pace)
+        setScreen({ name: 'ranked-queue', categoryId, pace })
+      }}
       onChangeOpponent={(categoryId) => setScreen({ name: 'opponent', categoryId })}
     />
   )
@@ -163,6 +170,32 @@ function App() {
           }
           saveLastOpponent(opponent)
           setScreen({ name: 'home' })
+        }}
+      />
+    )
+  } else if (screen.name === 'ranked-queue') {
+    view = (
+      <RandomQueue
+        categoryId={screen.categoryId}
+        pace={screen.pace}
+        onCancel={goHome}
+        onMatched={(match) => {
+          setPlayHash(match.code)
+          setScreen({
+            name: 'match',
+            categoryId: screen.categoryId,
+            opponent: {
+              kind: 'online',
+              roomId: match.code,
+              role: match.role,
+              friendName: match.name,
+              friendAvatar: match.avatar,
+              friendPhoto: match.photo,
+              ranked: true,
+              opponentId: match.opponentId,
+            },
+            pace: screen.pace,
+          })
         }}
       />
     )
@@ -236,6 +269,10 @@ function App() {
           round={screen.round}
           goAt={screen.goAt}
           onQuit={() => {
+            if (screen.opponent.kind === 'online' && screen.opponent.ranked) {
+              goHome()
+              return
+            }
             if (screen.opponent.kind === 'online') {
               getDuelRoom()?.send({ t: 'lobby', round: (screen.round ?? 0) + 1 })
               clearDuelHand()
@@ -253,6 +290,10 @@ function App() {
           }}
           onLobby={() => {
             if (screen.opponent.kind !== 'online') return
+            if (screen.opponent.ranked) {
+              goHome()
+              return
+            }
             clearDuelHand()
             setScreen({
               name: 'lobby',
@@ -266,6 +307,16 @@ function App() {
           onFinish={(you, them) => {
             clearDuelHand()
             if (screen.opponent.kind === 'online') {
+              if (screen.opponent.ranked) {
+                void recordRankedResult({
+                  code: screen.opponent.roomId,
+                  opponentId: screen.opponent.opponentId || getDuelRoom()?.friendId || '',
+                  myScore: you.score,
+                  theirScore: them.score,
+                  categoryId: screen.categoryId,
+                  pace: screen.pace,
+                })
+              }
               void saveDuelResult({
                 code: screen.opponent.roomId,
                 category_id: screen.categoryId,
@@ -312,6 +363,10 @@ function App() {
         }}
         onSameLobby={() => {
           if (screen.opponent.kind !== 'online') return
+          if (screen.opponent.ranked) {
+            setScreen({ name: 'ranked-queue', categoryId: screen.categoryId, pace: screen.pace })
+            return
+          }
           clearDuelHand()
           setScreen({
             name: 'lobby',

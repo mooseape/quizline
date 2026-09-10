@@ -6,7 +6,7 @@ export function planBotAnswer(
   bot: Bot,
   correctIndex: number,
   choiceCount: number,
-  pace: PaceMode = 'normal',
+  pace: PaceMode = 'rapid',
 ) {
   const maxDelay = Math.max(200, secondsForPace(pace) * 1000 - 250)
   const scale = maxDelay / (15 * 1000 - 250)

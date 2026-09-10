@@ -1,11 +1,13 @@
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import type { CategoryId, PaceMode } from '../types'
+import { coercePace } from './game'
+import { isCategoryId } from './topics'
 import { presenceProfile } from './account'
 import { safeMediaUrl } from './safeUrl'
 import { ensureAnonSession, getSupabase, isSupabaseConfigured, missingSupabaseMessage } from './supabase'
 
 export type DuelBody =
-  | { t: 'hello'; name: string; avatar?: string; photo?: string }
+  | { t: 'hello'; name: string; avatar?: string; photo?: string; uid?: string }
   | { t: 'need' }
   | { t: 'here' }
   | { t: 'start'; i: number; at: number }
@@ -25,6 +27,7 @@ export type DuelSession = {
   friendName: string
   friendAvatar?: string
   friendPhoto?: string
+  friendId?: string
   lastClock: Extract<DuelMsg, { t: 'start' | 'go' }> | null
   lastBegin: Extract<DuelMsg, { t: 'begin' }> | null
   ready: Promise<void>
@@ -43,23 +46,21 @@ let selfKey = ''
 let connected = false
 let outbound: DuelMsg[] = []
 
-function isCategoryId(value: unknown): value is CategoryId {
-  return value === 'mix' || value === 'general' || value === 'science' || value === 'history' || value === 'pop'
-}
-
-function isPace(value: unknown): value is PaceMode {
-  return value === 'blitz' || value === 'rapid' || value === 'normal'
-}
-
 let lockedPeer = ''
 
 function isDuelMsg(value: unknown): value is DuelMsg {
   if (!value || typeof value !== 'object' || !('t' in value) || !('from' in value)) return false
   const msg = value as DuelMsg
   if (typeof msg.from !== 'string' || !msg.from || msg.from.length > 80) return false
-  if (msg.t === 'setup') return isCategoryId(msg.categoryId) && isPace(msg.pace)
+  if (msg.t === 'setup') {
+    if (!isCategoryId(msg.categoryId)) return false
+    msg.pace = coercePace(msg.pace)
+    return true
+  }
   if (msg.t === 'begin') {
-    return isCategoryId(msg.categoryId) && isPace(msg.pace) && typeof msg.round === 'number' && typeof msg.at === 'number'
+    if (!isCategoryId(msg.categoryId) || typeof msg.round !== 'number' || typeof msg.at !== 'number') return false
+    msg.pace = coercePace(msg.pace)
+    return true
   }
   if (msg.t === 'lobby') return true
   const t = msg.t
@@ -75,6 +76,7 @@ function emit(msg: DuelMsg) {
       session.friendName = msg.name || 'Friend'
       session.friendAvatar = msg.avatar
       session.friendPhoto = safeMediaUrl(msg.photo)
+      if (msg.uid) session.friendId = msg.uid
     }
   }
   if (msg.t === 'lobby' && session) {

@@ -5,15 +5,8 @@ import { getBot } from '../data/bots'
 import { getDuelRoom } from '../lib/onlineDuel'
 import type { CategoryId, Opponent, PaceMode } from '../types'
 import { useAccount } from '../lib/AccountContext'
+import { TOPIC_HUE } from '../lib/topics'
 import { Avatar } from './Avatar'
-
-const TOPIC_HUE: Record<CategoryId, string> = {
-  mix: '#ff2d6a',
-  general: '#e39b00',
-  science: '#0ea5a0',
-  history: '#e86a00',
-  pop: '#6d3dff',
-}
 
 type Props = {
   categoryId: CategoryId
@@ -208,7 +201,11 @@ export function Result({
           <p className="results-flavor">{flavor}</p>
           <div className="results-actions">
             <button type="button" className="play-cta" onClick={online && onSameLobby ? backToLobby : onReplay}>
-              {online && onSameLobby ? 'Same lobby' : 'Play again'}
+              {online && opponent.kind === 'online' && opponent.ranked
+                ? 'Find another'
+                : online && onSameLobby
+                  ? 'Same lobby'
+                  : 'Play again'}
             </button>
             <button type="button" className="challenge-btn" onClick={onHome}>
               Home

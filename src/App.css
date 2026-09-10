@@ -2,7 +2,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 28px 40px 24px;
+  padding: 28px 40px 96px;
   gap: 28px;
 }
 
@@ -384,6 +384,18 @@
   --tile: #6d3dff;
 }
 
+.cat-tile[data-id='math'] {
+  --tile: #2563eb;
+}
+
+.cat-tile[data-id='geography'] {
+  --tile: #16a34a;
+}
+
+.cat-tile[data-id='sports'] {
+  --tile: #e11d48;
+}
+
 .cat-tile[data-id='more'] {
   --tile: #64748b;
 }
@@ -526,7 +538,7 @@
 
 @media (max-width: 899px) {
   .home {
-    padding: 18px 18px 18px;
+    padding: 18px 18px 96px;
   }
 
   .hero-row,
@@ -692,7 +704,7 @@
   bottom: 12px;
   z-index: 8;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 6px;
   margin-top: auto;
   padding: 6px;
@@ -709,6 +721,7 @@
   background: transparent;
   color: var(--text);
   font: inherit;
+  font-size: 14px;
   font-weight: 800;
   cursor: pointer;
 }
@@ -786,6 +799,31 @@
   border-radius: 16px;
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--bg) 70%, white);
+}
+
+.friends-list li.is-you {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+}
+
+.rank-place {
+  width: 28px;
+  flex-shrink: 0;
+  font-family: var(--mono);
+  font-weight: 800;
+  color: var(--text-h);
+}
+
+.rank-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.rank-stats span {
+  font-size: 12px;
+  color: var(--text);
 }
 
 .friend-face {

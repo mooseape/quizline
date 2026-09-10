@@ -7,6 +7,7 @@ import { COUNTDOWN_MS, COUNTDOWN_SECONDS, DIFFICULTY_LABEL, MAX_MATCH_SCORE, MAX
 import { getDuelRoom } from '../lib/onlineDuel'
 import { useAccount } from '../lib/AccountContext'
 import type { CategoryId, Opponent, PaceMode, PlayQuestion } from '../types'
+import { TOPIC_HUE } from '../lib/topics'
 import { HalfGlow } from './HalfGlow'
 import { MatchCountdown } from './MatchCountdown'
 import { MatchTimer } from './MatchTimer'
@@ -30,14 +31,6 @@ type Props = {
   onFinish: (you: { score: number; correct: number }, them: { name: string; score: number; correct: number }) => void
 }
 
-const TOPIC_HUE: Record<CategoryId, string> = {
-  mix: '#ff2d6a',
-  general: '#e39b00',
-  science: '#0ea5a0',
-  history: '#e86a00',
-  pop: '#6d3dff',
-}
-
 const PREVIEW_QUESTION: PlayQuestion = {
   id: 'preview-fortnite',
   prompt: 'Fortnite is primarily a…',
@@ -50,7 +43,7 @@ function previewMode() {
   return typeof window !== 'undefined' && window.location.hash.startsWith('#preview-duel')
 }
 
-export function DuelMatch({ categoryId, opponent, pace = 'normal', round = 0, goAt, onQuit, onLobby, onFinish }: Props) {
+export function DuelMatch({ categoryId, opponent, pace = 'rapid', round = 0, goAt, onQuit, onLobby, onFinish }: Props) {
   const youLook = useAccount()
   const preview = previewMode()
   const previewReveal = typeof window !== 'undefined' && window.location.hash === '#preview-duel-reveal'
@@ -434,7 +427,7 @@ export function DuelMatch({ categoryId, opponent, pace = 'normal', round = 0, go
           Exit
         </button>
         <p className="topic-chip">{category.name}</p>
-        {pace !== 'normal' ? <p className="topic-chip ghost-chip">{PACE_LABEL[pace]}</p> : null}
+        {pace !== 'rapid' ? <p className="topic-chip ghost-chip">{PACE_LABEL[pace]}</p> : null}
         <p className="top-clock" aria-hidden="true">
           {Math.max(0, Math.ceil(remainingMs / 1000))}
           <span>s</span>
