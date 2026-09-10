@@ -81,7 +81,7 @@ export function RanksPanel({ onNeedAccount }: Props) {
           <li key={row.userId} className={row.isYou ? 'is-you' : undefined}>
             <div className="friend-face">
               <span className="rank-place">{row.rank}</span>
-              <Avatar name={row.name} avatar={row.avatarId} src={row.photoUrl} size="sm" />
+              <Avatar name={row.name} avatar={row.avatarId} src={row.photoUrl} frame={row.isYou ? account.frameId : undefined} size="sm" />
               <div>
                 <strong>
                   {row.name}

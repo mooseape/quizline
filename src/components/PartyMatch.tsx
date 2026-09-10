@@ -22,10 +22,10 @@ type Seat = {
   name: string
   avatar?: string
   photo?: string
+  frame?: string
   picked: number | null
   score: number
   correct: number
-  streak: number
 }
 
 type Props = {
@@ -54,10 +54,10 @@ function emptySeats(players: PartyPlayer[]): Seat[] {
     name: player.name,
     avatar: player.avatar,
     photo: player.photo,
+    frame: player.frame,
     picked: null,
     score: 0,
     correct: 0,
-    streak: 0,
   }))
 }
 
@@ -112,6 +112,7 @@ export function PartyMatch({
       name: seat.name,
       avatar: seat.avatar,
       photo: seat.photo,
+      frame: seat.frame,
       score: seat.score,
       correct: seat.correct,
     }))
@@ -124,7 +125,7 @@ export function PartyMatch({
     if (!current || current.picked !== null) return
 
     const isCorrect = choiceIndex === currentQ.correctIndex
-    const gained = isCorrect ? scoreAnswer(remainingSeconds, current.streak, currentQ.difficulty) : 0
+    const gained = isCorrect ? scoreAnswer(remainingSeconds, currentQ.difficulty) : 0
     const next = seatsRef.current.map((seat) =>
       seat.id === playerId
         ? {
@@ -132,7 +133,6 @@ export function PartyMatch({
             picked: choiceIndex,
             score: seat.score + gained,
             correct: seat.correct + (isCorrect ? 1 : 0),
-            streak: isCorrect ? seat.streak + 1 : 0,
           }
         : seat,
     )
@@ -161,11 +161,6 @@ export function PartyMatch({
     if (resolvedRef.current) return
     resolvedRef.current = true
     setReveal(true)
-    setSeats((value) => {
-      const next = value.map((seat) => (seat.picked === null ? { ...seat, streak: 0 } : seat))
-      seatsRef.current = next
-      return next
-    })
 
     if (!isHost) return
     room?.send({ t: 'reveal', i: indexRef.current })
@@ -299,7 +294,7 @@ export function PartyMatch({
               key={seat.id}
               className={`party-seat${seat.id === selfId ? ' is-you' : ''}${seat.picked !== null ? ' is-locked' : ''}${reveal && seat.picked === null ? ' is-out' : ''}`}
             >
-              <Avatar name={seat.name} hue={hueFor(seat.id)} size="sm" avatar={seat.avatar} src={seat.photo} />
+              <Avatar name={seat.name} hue={hueFor(seat.id)} size="sm" avatar={seat.avatar} src={seat.photo} frame={seat.frame} />
               <span className="party-seat-name">{seat.name}{seat.id === selfId ? ' (you)' : ''}</span>
               <strong>{seat.score.toLocaleString('en-US')}</strong>
               <em>{reveal && seat.picked === null ? 'Timed out' : seat.picked !== null ? 'Locked in' : 'Waiting'}</em>

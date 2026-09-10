@@ -7,7 +7,7 @@ import { safeMediaUrl } from './safeUrl'
 import { ensureAnonSession, getSupabase, isSupabaseConfigured, missingSupabaseMessage } from './supabase'
 
 export type DuelBody =
-  | { t: 'hello'; name: string; avatar?: string; photo?: string; uid?: string }
+  | { t: 'hello'; name: string; avatar?: string; photo?: string; frame?: string; uid?: string }
   | { t: 'need' }
   | { t: 'here' }
   | { t: 'start'; i: number; at: number }
@@ -27,6 +27,7 @@ export type DuelSession = {
   friendName: string
   friendAvatar?: string
   friendPhoto?: string
+  friendFrame?: string
   friendId?: string
   lastClock: Extract<DuelMsg, { t: 'start' | 'go' }> | null
   lastBegin: Extract<DuelMsg, { t: 'begin' }> | null
@@ -76,6 +77,7 @@ function emit(msg: DuelMsg) {
       session.friendName = msg.name || 'Friend'
       session.friendAvatar = msg.avatar
       session.friendPhoto = safeMediaUrl(msg.photo)
+      session.friendFrame = typeof msg.frame === 'string' ? msg.frame : undefined
       if (msg.uid) session.friendId = msg.uid
     }
   }
@@ -180,6 +182,7 @@ export function openDuelRoom(code: string): DuelSession {
     friendName: 'Friend',
     friendAvatar: undefined,
     friendPhoto: undefined,
+    friendFrame: undefined,
     lastClock: null,
     lastBegin: null,
     ready: connect(code),

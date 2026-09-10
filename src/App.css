@@ -27,6 +27,7 @@
 .topbar-tools {
   align-items: center;
   gap: 12px;
+  overflow: visible;
 }
 
 .logo {
@@ -103,6 +104,90 @@
   background: transparent;
   cursor: pointer;
   border-radius: 999px;
+  overflow: visible;
+}
+
+.avatar-shell {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.avatar-shell-sm {
+  width: 44px;
+  height: 44px;
+}
+
+.avatar-shell-md {
+  width: 56px;
+  height: 56px;
+}
+
+.avatar-shell-lg {
+  width: 72px;
+  height: 72px;
+}
+
+.avatar-shell .avatar {
+  width: 100%;
+  height: 100%;
+}
+
+.avatar-shell.is-framed .avatar {
+  width: calc(100% - 6px);
+  height: calc(100% - 6px);
+}
+
+.avatar-frame {
+  position: absolute;
+  inset: -4px;
+  border-radius: 999px;
+  pointer-events: none;
+  z-index: 1;
+  background: conic-gradient(from 120deg, var(--frame-a), var(--frame-b), var(--frame-a));
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--frame-a) 55%, transparent);
+}
+
+.avatar-shell.is-neon {
+  --frame-a: #ff2d6a;
+  --frame-b: #ff8ab3;
+}
+
+.avatar-shell.is-gold {
+  --frame-a: #f5d76e;
+  --frame-b: #c48a12;
+}
+
+.avatar-shell.is-ice {
+  --frame-a: #e8fbff;
+  --frame-b: #38bdf8;
+}
+
+.avatar-shell.is-ember {
+  --frame-a: #ff7a18;
+  --frame-b: #ef4444;
+}
+
+.avatar-shell.is-dusk {
+  --frame-a: #8b5cf6;
+  --frame-b: #38bdf8;
+}
+
+.avatar-pick .avatar-shell-sm {
+  width: 100%;
+  height: 100%;
+}
+
+.avatar-pick.is-on {
+  border-color: var(--accent);
+}
+
+.frame-grid {
+  grid-template-columns: repeat(6, 1fr);
 }
 
 .avatar-sm {
@@ -648,6 +733,7 @@
   cursor: pointer;
   display: grid;
   place-items: center;
+  overflow: visible;
 }
 
 .avatar-pick.is-on {
@@ -1097,7 +1183,8 @@
   opacity: 0.7;
 }
 
-.face.is-winner .avatar {
+.face.is-winner .avatar,
+.face.is-winner .avatar-shell.is-framed .avatar {
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--topic) 55%, white), 0 0 24px color-mix(in srgb, var(--topic) 45%, transparent);
 }
 
@@ -1992,6 +2079,7 @@ html[data-theme='dark'] .today-chip {
   border-radius: 20px;
   background: color-mix(in srgb, var(--bg) 70%, white);
   border: 1px solid var(--border);
+  overflow: visible;
 }
 
 .player-rail.is-locked {

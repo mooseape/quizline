@@ -1,4 +1,5 @@
 import { parseAvatarId, type AvatarId } from './avatars'
+import { parseFrameId, type FrameId } from './frames'
 import { safeMediaUrl } from './safeUrl'
 import { getSupabase } from './supabase'
 
@@ -8,6 +9,7 @@ export type FriendProfile = {
   username: string
   avatarId: AvatarId
   photoUrl: string | null
+  frameId: FrameId | null
 }
 
 export type FriendEntry = {
@@ -27,6 +29,7 @@ type ProfileRow = {
   username: string | null
   avatar_id: string | null
   photo_url: string | null
+  frame_id: string | null
 }
 
 type FriendshipRow = {
@@ -38,7 +41,7 @@ type FriendshipRow = {
   addressee: ProfileRow | ProfileRow[] | null
 }
 
-const MISSING_TABLE = /friendships|username|schema cache|could not find|lookup_profile|is_email_user/i
+const MISSING_TABLE = /friendships|username|schema cache|could not find|lookup_profile|is_email_user|frame_id/i
 
 function one<T>(value: T | T[] | null | undefined): T | null {
   if (!value) return null
@@ -53,6 +56,7 @@ function asProfile(row: ProfileRow | null): FriendProfile | null {
     username: (row.username || '').toLowerCase(),
     avatarId: parseAvatarId(row.avatar_id),
     photoUrl: safeMediaUrl(row.photo_url) ?? null,
+    frameId: parseFrameId(row.frame_id),
   }
 }
 
@@ -77,7 +81,7 @@ export async function loadFriends(): Promise<FriendList> {
   const { data, error } = await supabase
     .from('friendships')
     .select(
-      'id, status, requester_id, addressee_id, requester:profiles!requester_id(id, display_name, username, avatar_id, photo_url), addressee:profiles!addressee_id(id, display_name, username, avatar_id, photo_url)',
+      'id, status, requester_id, addressee_id, requester:profiles!requester_id(id, display_name, username, avatar_id, photo_url, frame_id), addressee:profiles!addressee_id(id, display_name, username, avatar_id, photo_url, frame_id)',
     )
     .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`)
     .order('created_at', { ascending: false })

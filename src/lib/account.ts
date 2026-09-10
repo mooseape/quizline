@@ -1,6 +1,7 @@
 import type { User } from '@supabase/supabase-js'
 import { getHandle, handleOrYou, saveHandle } from './handle'
 import { parseAvatarId, type AvatarId } from './avatars'
+import { parseFrameId, type FrameId } from './frames'
 import { getSupabase } from './supabase'
 import { safeMediaUrl } from './safeUrl'
 import { assertCleanDisplayName, assertCleanUsername } from './moderation'
@@ -8,6 +9,7 @@ import { getCurrentUserId } from './sessionUser'
 
 const AVATAR_KEY = 'quizline-avatar'
 const PHOTO_KEY = 'quizline-photo'
+const FRAME_KEY = 'quizline-frame'
 const USERNAME_KEY = 'quizline-username'
 const COUNTRY_KEY = 'quizline-country'
 const listeners = new Set<() => void>()
@@ -17,6 +19,7 @@ export type AccountSnapshot = {
   username: string
   avatarId: AvatarId
   photoUrl: string | null
+  frameId: FrameId | null
   country: string
 }
 
@@ -39,8 +42,23 @@ export function getUsername() {
   return normalizeUsername(localStorage.getItem(USERNAME_KEY) ?? '')
 }
 
+export function getFrameId(): FrameId | null {
+  return parseFrameId(localStorage.getItem(FRAME_KEY))
+}
+
+export function saveFrameId(id: FrameId | null) {
+  if (getFrameId() === id) return
+  if (id) localStorage.setItem(FRAME_KEY, id)
+  else localStorage.removeItem(FRAME_KEY)
+  notify()
+}
+
 export function getCountry() {
   const raw = (localStorage.getItem(COUNTRY_KEY) ?? '').toUpperCase()
+  if (raw === 'IL') {
+    localStorage.removeItem(COUNTRY_KEY)
+    return ''
+  }
   return /^[A-Z]{2}$/.test(raw) ? raw : ''
 }
 
@@ -58,6 +76,7 @@ export function getAccountSnapshot(): AccountSnapshot {
     username: getUsername(),
     avatarId: getAvatarId(),
     photoUrl: getPhotoUrl(),
+    frameId: getFrameId(),
     country: getCountry(),
   }
 }
@@ -134,6 +153,7 @@ export function presenceProfile(extra: Record<string, unknown> = {}) {
     name: handleOrYou(),
     avatar: getAvatarId(),
     photo: shareablePhoto(getPhotoUrl()),
+    frame: getFrameId() ?? undefined,
     uid: getCurrentUserId() || undefined,
     ...extra,
   }
@@ -146,6 +166,7 @@ function metaOf(user: User | null) {
     username: typeof data.username === 'string' ? normalizeUsername(data.username) : '',
     avatarId: parseAvatarId(data.avatar_id),
     photoUrl: typeof data.photo_url === 'string' ? data.photo_url : '',
+    frameId: parseFrameId(data.frame_id),
   }
 }
 
@@ -155,6 +176,7 @@ export function applyUserProfile(user: User | null) {
   if (meta.name.trim()) saveHandle(meta.name)
   if (meta.username) saveUsername(meta.username)
   saveAvatarId(meta.avatarId)
+  saveFrameId(meta.frameId)
   if (meta.photoUrl.startsWith('https://') || meta.photoUrl.startsWith('data:image')) {
     savePhotoUrl(meta.photoUrl)
   }
@@ -170,6 +192,7 @@ export async function pushAccountToCloud() {
   const display_name = (getHandle() || 'You').slice(0, 16)
   assertCleanDisplayName(display_name)
   const avatar_id = getAvatarId()
+  const frame_id = getFrameId()
   const username = await claimUsername(getUsername() || display_name)
   assertCleanUsername(username)
   saveUsername(username)
@@ -187,7 +210,7 @@ export async function pushAccountToCloud() {
   const country = getCountry() || null
 
   await supabase.auth.updateUser({
-    data: { display_name, avatar_id, photo_url, username, country },
+    data: { display_name, avatar_id, photo_url, frame_id, username, country },
   })
 
   await supabase.from('profiles').upsert({
@@ -196,6 +219,7 @@ export async function pushAccountToCloud() {
     username,
     avatar_id,
     photo_url,
+    frame_id,
     country,
     updated_at: new Date().toISOString(),
   })
@@ -208,14 +232,17 @@ export async function hydrateCloudProfile(user: User | null) {
   if (!supabase) return
   const { data } = await supabase
     .from('profiles')
-    .select('username, display_name, avatar_id, photo_url, country')
+    .select('username, display_name, avatar_id, photo_url, frame_id, country')
     .eq('id', user.id)
     .maybeSingle()
   if (data?.username) saveUsername(data.username)
   if (data?.display_name) saveDisplayName(data.display_name)
   if (typeof data?.avatar_id === 'string') saveAvatarId(parseAvatarId(data.avatar_id))
   if (typeof data?.photo_url === 'string') savePhotoUrl(safeMediaUrl(data.photo_url) ?? null)
-  if (typeof data?.country === 'string' && /^[A-Z]{2}$/i.test(data.country)) saveCountry(data.country.toUpperCase())
+  if (data && 'frame_id' in data) saveFrameId(parseFrameId(data.frame_id))
+  if (typeof data?.country === 'string' && /^[A-Z]{2}$/i.test(data.country) && data.country.toUpperCase() !== 'IL') {
+    saveCountry(data.country.toUpperCase())
+  }
   if (!data?.username) await pushAccountToCloud()
 }
 
@@ -322,7 +349,8 @@ export async function signUpAccount(email: string, password: string) {
   const meta = {
     display_name: getHandle() || 'You',
     avatar_id: getAvatarId(),
-    photo_url: shareablePhoto(getPhotoUrl()) ?? null,
+      photo_url: shareablePhoto(getPhotoUrl()) ?? null,
+      frame_id: getFrameId(),
   }
   const { data: sessionData } = await supabase.auth.getSession()
   const anon = sessionData.session?.user

@@ -1,4 +1,5 @@
 import { avatarHue, type AvatarId } from '../lib/avatars'
+import { parseFrameId } from '../lib/frames'
 import { safeMediaUrl } from '../lib/safeUrl'
 
 type Props = {
@@ -7,6 +8,7 @@ type Props = {
   size?: 'sm' | 'md' | 'lg'
   avatar?: string | null
   src?: string | null
+  frame?: string | null
 }
 
 const FACE: Record<string, { l: [number, number]; r: [number, number]; smile: number; cheek?: boolean }> = {
@@ -51,14 +53,22 @@ function FaceMark({ id, hue }: { id: string; hue: string }) {
   )
 }
 
-export function Avatar({ name, hue = '#ff2d6a', size = 'md', avatar, src }: Props) {
+export function Avatar({ name, hue = '#ff2d6a', size = 'md', avatar, src, frame }: Props) {
   const initial = name.trim().charAt(0).toUpperCase() || '?'
   const tint = avatar ? avatarHue(avatar as AvatarId) : hue
+  const frameId = parseFrameId(frame)
   return (
-    <span className={`avatar avatar-${size}`} style={{ background: tint }} aria-hidden="true">
-      {src ? <img className="avatar-photo" src={safeMediaUrl(src) ?? undefined} alt="" /> : null}
-      {!src && avatar ? <FaceMark id={avatar} hue={tint} /> : null}
-      {!src && !avatar ? initial : null}
+    <span
+      className={`avatar-shell avatar-shell-${size}${frameId ? ` is-framed is-${frameId}` : ''}`}
+      data-frame={frameId ?? undefined}
+      aria-hidden="true"
+    >
+      <span className={`avatar avatar-${size}`} style={{ background: tint }}>
+        {src ? <img className="avatar-photo" src={safeMediaUrl(src) ?? undefined} alt="" /> : null}
+        {!src && avatar ? <FaceMark id={avatar} hue={tint} /> : null}
+        {!src && !avatar ? initial : null}
+      </span>
+      {frameId ? <span className="avatar-frame" /> : null}
     </span>
   )
 }

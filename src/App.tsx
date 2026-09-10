@@ -16,7 +16,7 @@ import { closePartyRoom } from './lib/onlineParty'
 import { recordRankedResult } from './lib/leaderboard'
 import { saveDuelResult } from './lib/saveDuel'
 import { handleOrYou } from './lib/handle'
-import { bumpPlayStreak, saveBestScore, saveLastCategory, saveLastOpponent, getLastOpponent, getBestScore, getLastPace, saveLastPace } from './lib/storage'
+import { saveBestScore, saveLastCategory, saveLastOpponent, getLastOpponent, getBestScore, getLastPace, saveLastPace } from './lib/storage'
 import type { CategoryId, PaceMode, Screen } from './types'
 import './App.css'
 
@@ -191,6 +191,7 @@ function App() {
               friendName: match.name,
               friendAvatar: match.avatar,
               friendPhoto: match.photo,
+              friendFrame: match.frame,
               ranked: true,
               opponentId: match.opponentId,
             },
@@ -228,6 +229,7 @@ function App() {
               friendName,
               friendAvatar: look?.avatar,
               friendPhoto: look?.photo,
+              friendFrame: look?.frame,
             },
             pace,
             round,
@@ -247,7 +249,6 @@ function App() {
           onFinish={(score, correct) => {
             const previousBest = getBestScore(screen.categoryId)
             saveBestScore(screen.categoryId, score)
-            bumpPlayStreak()
             setScreen({
               name: 'result',
               categoryId: screen.categoryId,
@@ -328,7 +329,6 @@ function App() {
             }
             const previousBest = getBestScore(screen.categoryId)
             saveBestScore(screen.categoryId, you.score)
-            bumpPlayStreak()
             setScreen({
               name: 'result',
               categoryId: screen.categoryId,

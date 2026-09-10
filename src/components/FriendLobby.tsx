@@ -37,12 +37,12 @@ type Props = {
     round: number,
     goAt: number,
     friendName: string,
-    look?: { avatar?: string; photo?: string },
+    look?: { avatar?: string; photo?: string; frame?: string },
   ) => void
 }
 
 export function FriendLobby({ categoryId, code, role, pace, round, onCancel, onSetup, onStart }: Props) {
-  const { setName: saveName, avatarId, photoUrl } = useAccount()
+  const { setName: saveName, avatarId, photoUrl, frameId } = useAccount()
   const [name, setName] = useState(() => getHandle())
   const [topic, setTopic] = useState(categoryId)
   const [speed, setSpeed] = useState(pace)
@@ -50,7 +50,7 @@ export function FriendLobby({ categoryId, code, role, pace, round, onCancel, onS
   const [editing, setEditing] = useState(false)
   const [friendIn, setFriendIn] = useState(false)
   const [friendName, setFriendName] = useState('Friend')
-  const [friendLook, setFriendLook] = useState<{ avatar?: string; photo?: string }>({})
+  const [friendLook, setFriendLook] = useState<{ avatar?: string; photo?: string; frame?: string }>({})
   const [status, setStatus] = useState(
     !isSupabaseConfigured()
       ? missingSupabaseMessage()
@@ -85,7 +85,7 @@ export function FriendLobby({ categoryId, code, role, pace, round, onCancel, onS
     saveName(name)
     void trackDuelProfile()
     announceHello()
-  }, [name, saveName])
+  }, [name, saveName, avatarId, photoUrl, frameId])
 
   useEffect(() => {
     if (editing) nameRef.current?.focus()
@@ -100,8 +100,8 @@ export function FriendLobby({ categoryId, code, role, pace, round, onCancel, onS
       setFriendIn(inRoom)
       const room = getDuelRoom()
       if (room?.friendName) setFriendName(room.friendName)
-      if (room?.friendAvatar || room?.friendPhoto) {
-        setFriendLook({ avatar: room.friendAvatar, photo: room.friendPhoto })
+      if (room?.friendAvatar || room?.friendPhoto || room?.friendFrame) {
+        setFriendLook({ avatar: room.friendAvatar, photo: room.friendPhoto, frame: room.friendFrame })
       }
       if (inRoom) {
         const who = room?.friendName || 'Friend'
@@ -135,7 +135,7 @@ export function FriendLobby({ categoryId, code, role, pace, round, onCancel, onS
         announceHello()
         setFriendIn(true)
         setFriendName(msg.name || 'Friend')
-        setFriendLook({ avatar: msg.avatar, photo: safeMediaUrl(msg.photo) })
+        setFriendLook({ avatar: msg.avatar, photo: safeMediaUrl(msg.photo), frame: msg.frame })
         setStatus(role === 'host' ? `${msg.name || 'Friend'} joined — starting…` : 'Waiting for host to start')
         syncFriend()
       }
@@ -149,6 +149,7 @@ export function FriendLobby({ categoryId, code, role, pace, round, onCancel, onS
         onStartRef.current(msg.categoryId, msg.pace, msg.round, msg.at, session.friendName || friendNameRef.current, {
           avatar: session.friendAvatar,
           photo: session.friendPhoto,
+          frame: session.friendFrame,
         })
       }
     })
@@ -191,6 +192,7 @@ export function FriendLobby({ categoryId, code, role, pace, round, onCancel, onS
     onStart(topic, speed, round, at, session.friendName || friendName, {
       avatar: session.friendAvatar,
       photo: session.friendPhoto,
+      frame: session.friendFrame,
     })
   }
 
@@ -266,7 +268,7 @@ export function FriendLobby({ categoryId, code, role, pace, round, onCancel, onS
         <div className="duel-faceoff" aria-label="1v1 seats">
           <div className="duel-seat is-you">
             <button type="button" className="duel-seat-hit" onClick={() => setEditing(true)} aria-label="Edit your name">
-              <Avatar name={youLabel} avatar={avatarId} src={photoUrl} size="lg" />
+              <Avatar name={youLabel} avatar={avatarId} src={photoUrl} frame={frameId} size="lg" />
             </button>
             {editing ? (
               <input
@@ -290,7 +292,7 @@ export function FriendLobby({ categoryId, code, role, pace, round, onCancel, onS
           <p className="duel-vs">vs</p>
           <div className={`duel-seat${friendIn ? ' is-in' : ' is-empty'}`}>
             {friendIn ? (
-              <Avatar name={friendName} avatar={friendLook.avatar} src={friendLook.photo} size="lg" hue="#0ea5e9" />
+              <Avatar name={friendName} avatar={friendLook.avatar} src={friendLook.photo} frame={friendLook.frame} size="lg" hue="#0ea5e9" />
             ) : (
               <span className="party-slot-ghost duel-seat-ghost" aria-hidden="true" />
             )}

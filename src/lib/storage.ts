@@ -69,17 +69,6 @@ export function markRulesSeen() {
   localStorage.setItem(SEEN_RULES, '1')
 }
 
-const STREAK_KEY = 'quizline-streak'
-
-export function getPlayStreak(): number {
-  const value = Number(localStorage.getItem(STREAK_KEY) ?? 0)
-  return Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0
-}
-
-export function bumpPlayStreak() {
-  localStorage.setItem(STREAK_KEY, String(getPlayStreak() + 1))
-}
-
 function seenKey(categoryId: string) {
   return `quizline-seen-${categoryId}`
 }

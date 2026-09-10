@@ -51,13 +51,13 @@ function prettyCode(code: string) {
 }
 
 export function PartyLobby({ categoryId, code, role, pace, round, onCancel, onSetup, onStart }: Props) {
-  const { setName: saveName, avatarId, photoUrl } = useAccount()
+  const { setName: saveName, avatarId, photoUrl, frameId } = useAccount()
   const [name, setName] = useState(getHandle)
   const [topic, setTopic] = useState(categoryId)
   const [speed, setSpeed] = useState(pace)
   const [copied, setCopied] = useState(false)
   const [players, setPlayers] = useState<PartyPlayer[]>(() => [
-    { id: partySelfId(), name: getHandle() || 'You', host: role === 'host', avatar: avatarId, photo: photoUrl ?? undefined },
+    { id: partySelfId(), name: getHandle() || 'You', host: role === 'host', avatar: avatarId, photo: photoUrl ?? undefined, frame: frameId ?? undefined },
   ])
   const [error, setError] = useState(isSupabaseConfigured() ? '' : missingSupabaseMessage())
   const link = partyUrl(code)
@@ -84,7 +84,7 @@ export function PartyLobby({ categoryId, code, role, pace, round, onCancel, onSe
   useEffect(() => {
     saveName(name)
     void trackPartyProfile(role === 'host')
-  }, [name, role, saveName, avatarId, photoUrl])
+  }, [name, role, saveName, avatarId, photoUrl, frameId])
 
   useEffect(() => {
     if (!isSupabaseConfigured()) return undefined
@@ -258,6 +258,7 @@ export function PartyLobby({ categoryId, code, role, pace, round, onCancel, onSe
                 hue={role === 'host' ? HOST_HUE : hueFor(you ?? { id: selfId, name: displayName })}
                 avatar={avatarId}
                 src={photoUrl}
+                frame={frameId}
                 size="lg"
               />
               <div className="party-you-meta">
@@ -309,7 +310,7 @@ export function PartyLobby({ categoryId, code, role, pace, round, onCancel, onSe
             {seats.map((player, index) =>
               player ? (
                 <li key={player.id} className={`party-slot is-in${player.id === selfId ? ' is-you' : ''}${player.host ? ' is-host' : ''}`}>
-                  <Avatar name={player.name} hue={hueFor(player)} size="md" avatar={player.avatar} src={player.photo} />
+                  <Avatar name={player.name} hue={hueFor(player)} size="md" avatar={player.avatar} src={player.photo} frame={player.frame} />
                   <div>
                     <strong>{player.name}</strong>
                     {player.host ? <span>Host</span> : player.id === selfId ? <span>You</span> : <span>Ready</span>}

@@ -8,7 +8,7 @@ type Props = {
   categoryId: CategoryId
   pace: PaceMode
   onCancel: () => void
-  onMatched: (match: { code: string; role: 'host' | 'guest'; name: string; avatar?: string; photo?: string; opponentId: string }) => void
+  onMatched: (match: { code: string; role: 'host' | 'guest'; name: string; avatar?: string; photo?: string; frame?: string; opponentId: string }) => void
 }
 
 export function RandomQueue({ categoryId, pace, onCancel, onMatched }: Props) {
@@ -27,6 +27,7 @@ export function RandomQueue({ categoryId, pace, onCancel, onMatched }: Props) {
           name: match.peer.name,
           avatar: match.peer.avatar,
           photo: match.peer.photo,
+          frame: match.peer.frame,
           opponentId: match.peer.userId,
         })
       })

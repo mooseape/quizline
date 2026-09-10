@@ -9,6 +9,7 @@ export type RankedPeer = {
   name: string
   avatar?: string
   photo?: string
+  frame?: string
 }
 
 type PairMsg = {
@@ -46,6 +47,7 @@ function selfPeer(): RankedPeer {
     name: look.name,
     avatar: typeof look.avatar === 'string' ? look.avatar : undefined,
     photo: typeof look.photo === 'string' ? look.photo : undefined,
+    frame: typeof look.frame === 'string' ? look.frame : undefined,
   }
 }
 
@@ -106,13 +108,14 @@ export async function findRankedMatch(
     }
 
     function presenceOf(id: string): RankedPeer {
-      const state = channel.presenceState() as Record<string, { userId?: string; name?: string; avatar?: string; photo?: string }[]>
+      const state = channel.presenceState() as Record<string, { userId?: string; name?: string; avatar?: string; photo?: string; frame?: string }[]>
       const row = state[id]?.[0]
       return {
         userId: row?.userId || id,
         name: row?.name || 'Opponent',
         avatar: typeof row?.avatar === 'string' ? row.avatar : undefined,
         photo: typeof row?.photo === 'string' ? row.photo : undefined,
+        frame: typeof row?.frame === 'string' ? row.frame : undefined,
       }
     }
 

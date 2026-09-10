@@ -9,6 +9,7 @@ import {
   saveAvatarId,
   saveCountry,
   saveDisplayName,
+  saveFrameId,
   savePhotoUrl,
   saveUsernameAndSync,
   signInAccount,
@@ -19,6 +20,7 @@ import {
 } from './account'
 import { setCurrentUserId } from './sessionUser'
 import type { AvatarId } from './avatars'
+import type { FrameId } from './frames'
 import { getSupabase, isSupabaseConfigured } from './supabase'
 
 type AccountContextValue = AccountSnapshot & {
@@ -31,6 +33,7 @@ type AccountContextValue = AccountSnapshot & {
   setName: (name: string) => void
   setCountry: (code: string) => void
   setAvatarId: (id: AvatarId) => void
+  setFrameId: (id: FrameId | null) => void
   setPhotoUrl: (url: string | null) => void
   setUsername: (username: string) => Promise<void>
   signIn: (email: string, password: string) => Promise<void>
@@ -102,6 +105,10 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       },
       setAvatarId: (id) => {
         saveAvatarId(id)
+        pushAccountSoon()
+      },
+      setFrameId: (id) => {
+        saveFrameId(id)
         pushAccountSoon()
       },
       setPhotoUrl: (url) => {

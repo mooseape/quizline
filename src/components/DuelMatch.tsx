@@ -17,7 +17,6 @@ type SideState = {
   picked: number | null
   score: number
   correct: number
-  streak: number
 }
 
 type Props = {
@@ -82,11 +81,11 @@ export function DuelMatch({ categoryId, opponent, pace = 'rapid', round = 0, goA
   const [countSec, setCountSec] = useState(COUNTDOWN_SECONDS)
   const [reveal, setReveal] = useState(previewReveal)
   const [friendGone, setFriendGone] = useState(false)
-  const [you, setYou] = useState<SideState>({ picked: null, score: 0, correct: 0, streak: 0 })
+  const [you, setYou] = useState<SideState>({ picked: null, score: 0, correct: 0 })
   const [them, setThem] = useState<SideState>(
     preview
-      ? { picked: 1, score: 240, correct: 1, streak: 1 }
-      : { picked: null, score: 0, correct: 0, streak: 0 },
+      ? { picked: 1, score: 240, correct: 1 }
+      : { picked: null, score: 0, correct: 0 },
   )
 
   const youRef = useRef(you)
@@ -120,7 +119,6 @@ export function DuelMatch({ categoryId, opponent, pace = 'rapid', round = 0, goA
       s: Math.max(0, Math.floor(remainingRef.current / 1000)),
       score: y.score,
       correct: y.correct,
-      streak: y.streak,
     })
   }
 
@@ -139,7 +137,6 @@ export function DuelMatch({ categoryId, opponent, pace = 'rapid', round = 0, goA
         picked: msg.c >= 0 ? msg.c : null,
         score: msg.score,
         correct: msg.correct ?? themRef.current.correct,
-        streak: msg.streak ?? themRef.current.streak,
       }
       themRef.current = next
       setThem(next)
@@ -158,12 +155,11 @@ export function DuelMatch({ categoryId, opponent, pace = 'rapid', round = 0, goA
     if (current.picked !== null) return
 
     const isCorrect = choiceIndex === currentQ.correctIndex
-    const gained = isCorrect ? scoreAnswer(remainingSeconds, current.streak, currentQ.difficulty) : 0
+    const gained = isCorrect ? scoreAnswer(remainingSeconds, currentQ.difficulty) : 0
     const next: SideState = {
       picked: choiceIndex,
       score: current.score + gained,
       correct: current.correct + (isCorrect ? 1 : 0),
-      streak: isCorrect ? current.streak + 1 : 0,
     }
     if (side === 'you') {
       youRef.current = next
@@ -197,19 +193,6 @@ export function DuelMatch({ categoryId, opponent, pace = 'rapid', round = 0, goA
     if (resolvedRef.current) return
     resolvedRef.current = true
     setReveal(true)
-
-    const youNow = youRef.current
-    const themNow = themRef.current
-    if (youNow.picked === null) {
-      const next = { ...youNow, streak: 0 }
-      youRef.current = next
-      setYou(next)
-    }
-    if (themNow.picked === null) {
-      const next = { ...themNow, streak: 0 }
-      themRef.current = next
-      setThem(next)
-    }
 
     if (preview) return
     if (online) publishYou()
@@ -455,6 +438,7 @@ export function DuelMatch({ categoryId, opponent, pace = 'rapid', round = 0, goA
           timedOut={reveal && !youLocked}
           avatar={youLook.avatarId}
           src={youLook.photoUrl}
+          frame={youLook.frameId}
         />
 
         <section className="play-center">
@@ -503,6 +487,7 @@ export function DuelMatch({ categoryId, opponent, pace = 'rapid', round = 0, goA
           timedOut={reveal && !themLocked}
           avatar={opponent.kind === 'online' ? opponent.friendAvatar : undefined}
           src={opponent.kind === 'online' ? opponent.friendPhoto : undefined}
+          frame={opponent.kind === 'online' ? opponent.friendFrame : undefined}
         />
       </div>
     </main>

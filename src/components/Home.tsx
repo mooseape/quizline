@@ -7,7 +7,6 @@ import {
   getLastCategory,
   getLastOpponent,
   getLastPace,
-  getPlayStreak,
   hasSeenRules,
   markRulesSeen,
   saveLastPace,
@@ -119,7 +118,6 @@ export function Home({ onPlay, onChallengeFriend, onJoinFriend, onParty, onJoinP
   const [showRules, setShowRules] = useState(false)
   const [showAccount, setShowAccount] = useState(false)
   const [homeTab, setHomeTab] = useState<'play' | 'friends' | 'ranks'>('play')
-  const streak = getPlayStreak()
   const bests = useMemo(
     () => Object.fromEntries(topics.map((topic) => [topic.id, getBestScore(topic.id)])),
     [],
@@ -148,11 +146,8 @@ export function Home({ onPlay, onChallengeFriend, onJoinFriend, onParty, onJoinP
           </p>
         </div>
         <div className="topbar-tools">
-          <p className="streak-chip" title="Matches finished">
-            Streak {streak}
-          </p>
           <button type="button" className="account-btn" aria-label="Account and profile picture" onClick={() => setShowAccount(true)}>
-            <Avatar name={account.name || 'You'} avatar={account.avatarId} src={account.photoUrl} size="sm" />
+            <Avatar name={account.name || 'You'} avatar={account.avatarId} src={account.photoUrl} frame={account.frameId} size="sm" />
           </button>
           <button type="button" className="help-btn" aria-label="How to play" onClick={() => setShowRules(true)}>
             ?

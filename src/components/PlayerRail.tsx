@@ -10,13 +10,14 @@ type Props = {
   timedOut?: boolean
   avatar?: string | null
   src?: string | null
+  frame?: string | null
 }
 
-export function PlayerRail({ name, tag, hue, score, locked, waiting, timedOut, avatar, src }: Props) {
+export function PlayerRail({ name, tag, hue, score, locked, waiting, timedOut, avatar, src, frame }: Props) {
   const state = timedOut ? 'Timed out' : locked ? 'Locked in' : waiting ? 'Waiting' : 'Answering'
   return (
     <aside className={`player-rail${locked ? ' is-locked' : ''}${timedOut ? ' is-out' : ''}`}>
-      <Avatar name={name} hue={hue} size="md" avatar={avatar} src={src} />
+      <Avatar name={name} hue={hue} size="md" avatar={avatar} src={src} frame={frame} />
       <div className="rail-copy">
         <strong>{name}</strong>
         <span>{tag}</span>

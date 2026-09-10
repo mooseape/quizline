@@ -144,7 +144,7 @@ export function Result({
                 Win
               </span>
             ) : null}
-            <Avatar name={youLook.name || 'You'} hue="#ff2d6a" size="lg" avatar={youLook.avatarId} src={youLook.photoUrl} />
+            <Avatar name={youLook.name || 'You'} hue="#ff2d6a" size="lg" avatar={youLook.avatarId} src={youLook.photoUrl} frame={youLook.frameId} />
             <strong>{youLook.name || 'You'}</strong>
             <p className="face-pts">{formatPts(you.score)}</p>
             <p className="face-hits">
@@ -175,6 +175,7 @@ export function Result({
                   size="lg"
                   avatar={opponent.kind === 'online' ? opponent.friendAvatar : undefined}
                   src={opponent.kind === 'online' ? opponent.friendPhoto : undefined}
+                  frame={opponent.kind === 'online' ? opponent.friendFrame : undefined}
                 />
                 <strong>{them.name}</strong>
                 <p className="face-pts">{formatPts(them.score)}</p>

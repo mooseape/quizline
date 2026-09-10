@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { AVATAR_PACK } from '../lib/avatars'
+import { FRAME_PACK } from '../lib/frames'
 import { compressPhoto } from '../lib/account'
 import { assertSafePhoto } from '../lib/moderation'
 import { COUNTRIES } from '../data/countries'
@@ -67,7 +68,7 @@ export function AccountSheet({ onClose }: Props) {
         <p className="eyebrow">Profile</p>
         <h2 id="account-title">{account.signedIn ? 'Your account' : 'Your look'}</h2>
         <div className="account-you">
-          <Avatar name={account.name || 'You'} avatar={account.avatarId} src={account.photoUrl} size="lg" />
+          <Avatar name={account.name || 'You'} avatar={account.avatarId} src={account.photoUrl} frame={account.frameId} size="lg" />
           <label className="lobby-label" htmlFor="account-name">
             Display name
             <input
@@ -128,6 +129,38 @@ export function AccountSheet({ onClose }: Props) {
             </label>
           </>
         ) : null}
+
+        <p className="lobby-label">Frame</p>
+        <ul className="avatar-grid frame-grid" aria-label="Choose a frame">
+          <li>
+            <button
+              type="button"
+              className={`avatar-pick${!account.frameId ? ' is-on' : ''}`}
+              aria-label="No frame"
+              onClick={() => account.setFrameId(null)}
+            >
+              <Avatar name={account.name || 'You'} avatar={account.avatarId} src={account.photoUrl} size="sm" />
+            </button>
+          </li>
+          {FRAME_PACK.map((item) => (
+            <li key={item.id}>
+              <button
+                type="button"
+                className={`avatar-pick${account.frameId === item.id ? ' is-on' : ''}`}
+                aria-label={item.label}
+                onClick={() => account.setFrameId(item.id)}
+              >
+                <Avatar
+                  name={item.label}
+                  avatar={account.avatarId}
+                  src={account.photoUrl}
+                  frame={item.id}
+                  size="sm"
+                />
+              </button>
+            </li>
+          ))}
+        </ul>
 
         <p className="lobby-label">Picture</p>
         <ul className="avatar-grid" aria-label="Choose a picture">

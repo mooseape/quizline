@@ -86,7 +86,7 @@ export function PartyResult({ categoryId, code, role, pace, round, standings, on
           return (
             <li key={row.id} className={`podium-step ${placeClass[visualIndex]}${row.id === selfId ? ' is-you' : ''}`}>
               <p className="podium-place">{place}</p>
-              <Avatar name={row.name} hue={hueFor(row.id)} size="lg" avatar={row.avatar} src={row.photo} />
+              <Avatar name={row.name} hue={hueFor(row.id)} size="lg" avatar={row.avatar} src={row.photo} frame={row.frame} />
               <strong>{row.name}</strong>
               <p className="face-pts">{row.score.toLocaleString('en-US')} pts</p>
               <p className="face-hits">
@@ -102,7 +102,7 @@ export function PartyResult({ categoryId, code, role, pace, round, standings, on
           {rest.map((row, index) => (
             <li key={row.id} className={row.id === selfId ? 'is-you' : ''}>
               <span>{index + 4}</span>
-              <Avatar name={row.name} hue={hueFor(row.id)} size="sm" avatar={row.avatar} src={row.photo} />
+              <Avatar name={row.name} hue={hueFor(row.id)} size="sm" avatar={row.avatar} src={row.photo} frame={row.frame} />
               <strong>{row.name}</strong>
               <em>{row.score.toLocaleString('en-US')}</em>
             </li>

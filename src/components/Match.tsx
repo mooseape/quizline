@@ -24,7 +24,6 @@ export function Match({ categoryId, pace = 'rapid', onQuit, onFinish }: Props) {
   const [picked, setPicked] = useState<number | null>(null)
   const [score, setScore] = useState(0)
   const [correctCount, setCorrectCount] = useState(0)
-  const [streak, setStreak] = useState(0)
   const scoreRef = useRef(0)
   const correctRef = useRef(0)
   const indexRef = useRef(0)
@@ -83,7 +82,6 @@ export function Match({ categoryId, pace = 'rapid', onQuit, onFinish }: Props) {
 
   useEffect(() => {
     if (countingDown || seconds !== 0 || picked !== null || !question) return
-    setStreak(0)
     goNext()
   }, [seconds, picked, question])
 
@@ -96,13 +94,12 @@ export function Match({ categoryId, pace = 'rapid', onQuit, onFinish }: Props) {
   function choose(choiceIndex: number) {
     if (locked || !question) return
     const isCorrect = choiceIndex === question.correctIndex
-    const gained = isCorrect ? scoreAnswer(seconds, streak, question.difficulty) : 0
+    const gained = isCorrect ? scoreAnswer(seconds, question.difficulty) : 0
     const nextScore = score + gained
     const nextCorrect = correctCount + (isCorrect ? 1 : 0)
     scoreRef.current = nextScore
     correctRef.current = nextCorrect
     setPicked(choiceIndex)
-    setStreak(isCorrect ? streak + 1 : 0)
     setScore(nextScore)
     setCorrectCount(nextCorrect)
     goNext()

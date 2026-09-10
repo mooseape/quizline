@@ -453,3 +453,7 @@ $$;
 
 revoke all on function public.leaderboard_rows(text, text) from public, anon;
 grant execute on function public.leaderboard_rows(text, text) to authenticated;
+
+-- Avatar frames (safe to re-run)
+
+alter table public.profiles add column if not exists frame_id text;

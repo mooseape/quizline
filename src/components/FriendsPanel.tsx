@@ -210,7 +210,7 @@ export function FriendsPanel({ onNeedAccount, onChallenge }: Props) {
 function FriendRow({ profile }: { profile: FriendProfile }) {
   return (
     <div className="friend-face">
-      <Avatar name={profile.name} avatar={profile.avatarId} src={profile.photoUrl} size="sm" />
+      <Avatar name={profile.name} avatar={profile.avatarId} src={profile.photoUrl} frame={profile.frameId} size="sm" />
       <div>
         <strong>{profile.name}</strong>
         <span>@{profile.username || 'unknown'}</span>

@@ -7,7 +7,7 @@ import type { CategoryId, PaceMode, PartyPlayer } from '../types'
 import { isCategoryId } from './topics'
 
 export type PartyBody =
-  | { t: 'hello'; id: string; name: string; avatar?: string; photo?: string }
+  | { t: 'hello'; id: string; name: string; avatar?: string; photo?: string; frame?: string }
   | { t: 'setup'; categoryId: CategoryId; pace: PaceMode }
   | { t: 'begin'; round: number; at: number; i: number; players: PartyPlayer[]; categoryId?: CategoryId; pace?: PaceMode }
   | { t: 'pick'; i: number; c: number; s: number; id: string }
@@ -180,13 +180,14 @@ export function partySelfId() {
 export function listPartyPlayers(): PartyPlayer[] {
   const self = session ? [{ id: session.selfId, host: selfIsHost, ...presenceProfile() }] : []
   if (!channel) return self
-  const state = channel.presenceState() as Record<string, { name?: string; host?: boolean; avatar?: string; photo?: string }[]>
+  const state = channel.presenceState() as Record<string, { name?: string; host?: boolean; avatar?: string; photo?: string; frame?: string }[]>
   const listed = Object.entries(state).map(([id, metas]) => ({
     id,
     name: metas[0]?.name?.trim() || 'Friend',
     host: Boolean(metas[0]?.host),
     avatar: metas[0]?.avatar,
     photo: safeMediaUrl(metas[0]?.photo),
+    frame: typeof metas[0]?.frame === 'string' ? metas[0].frame : undefined,
   }))
   const selfId = session?.selfId
   if (selfId && !listed.some((player) => player.id === selfId)) {

@@ -33,6 +33,7 @@ export type PartyPlayer = {
   host?: boolean
   avatar?: string
   photo?: string
+  frame?: string
 }
 
 export type PartyStanding = PartyPlayer & {
@@ -44,7 +45,7 @@ export type Opponent =
   | { kind: 'solo' }
   | { kind: 'bot'; botId: string }
   | { kind: 'local' }
-  | { kind: 'online'; roomId: string; role: 'host' | 'guest'; friendName: string; friendAvatar?: string; friendPhoto?: string; ranked?: boolean; opponentId?: string }
+  | { kind: 'online'; roomId: string; role: 'host' | 'guest'; friendName: string; friendAvatar?: string; friendPhoto?: string; friendFrame?: string; ranked?: boolean; opponentId?: string }
 
 export type Screen =
   | { name: 'home' }

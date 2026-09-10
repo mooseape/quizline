@@ -31,7 +31,7 @@ export const COUNTRIES: { code: string; name: string }[] = [
   { code: 'TR', name: 'Turkey' },
   { code: 'SA', name: 'Saudi Arabia' },
   { code: 'AE', name: 'United Arab Emirates' },
-  { code: 'IL', name: 'Israel' },
+  { code: 'PS', name: 'Palestine' },
   { code: 'BR', name: 'Brazil' },
   { code: 'MX', name: 'Mexico' },
   { code: 'AR', name: 'Argentina' },
