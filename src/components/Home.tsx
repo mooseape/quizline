@@ -1,23 +1,36 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getBot } from '../data/bots'
 import { categories, getCategory } from '../data/questions'
-import { QUESTIONS_PER_MATCH, SECONDS_PER_QUESTION } from '../lib/game'
+import { PACE_LABEL, PACE_MODES, QUESTIONS_PER_MATCH, secondsForPace } from '../lib/game'
 import {
   getBestScore,
   getLastCategory,
   getLastOpponent,
+  getLastPace,
   getPlayStreak,
   hasSeenRules,
   markRulesSeen,
+  saveLastPace,
 } from '../lib/storage'
-import type { CategoryId, Opponent } from '../types'
+import type { CategoryId, Opponent, PaceMode } from '../types'
 import { parseInvite } from '../lib/invite'
+import { AccountSheet } from './AccountSheet'
 import { Avatar } from './Avatar'
+import { FriendsPanel } from './FriendsPanel'
 import { RulesOverlay } from './RulesOverlay'
 import { ThemeToggle } from './ThemeToggle'
 import { TopicIcon } from './TopicIcon'
+import { useAccount } from '../lib/AccountContext'
 
 const SCORE_GOAL = 2500
+
+const TOPIC_HUE: Record<CategoryId, string> = {
+  mix: '#ff2d6a',
+  general: '#e39b00',
+  science: '#0ea5a0',
+  history: '#e86a00',
+  pop: '#6d3dff',
+}
 
 const topics: { id: CategoryId; label: string }[] = [
   { id: 'mix', label: 'Daily Mix' },
@@ -25,9 +38,11 @@ const topics: { id: CategoryId; label: string }[] = [
 ]
 
 type Props = {
-  onPlay: (categoryId: CategoryId) => void
-  onChallengeFriend: (categoryId: CategoryId) => void
-  onJoinFriend: (code: string, categoryId: CategoryId) => void
+  onPlay: (categoryId: CategoryId, pace: PaceMode) => void
+  onChallengeFriend: (categoryId: CategoryId, pace: PaceMode) => void
+  onJoinFriend: (code: string, categoryId: CategoryId, pace: PaceMode) => void
+  onParty: (categoryId: CategoryId, pace: PaceMode) => void
+  onJoinParty: (code: string, categoryId: CategoryId, pace: PaceMode) => void
   onChangeOpponent: (categoryId: CategoryId) => void
 }
 
@@ -47,7 +62,7 @@ function heroLine(categoryId: CategoryId, best: number, opponent: Opponent) {
     return bot ? `${bot.name} is waiting` : 'Your opponent is waiting'
   }
   if (opponent.kind === 'local') return 'Friend is on this device'
-  if (opponent.kind === 'online') return 'Send a link — no accounts'
+  if (opponent.kind === 'online') return 'Send a link — they join on their phone'
   return `First match in ${name}`
 }
 
@@ -99,12 +114,16 @@ function opponentView(opponent: Opponent) {
   }
 }
 
-export function Home({ onPlay, onChallengeFriend, onJoinFriend, onChangeOpponent }: Props) {
+export function Home({ onPlay, onChallengeFriend, onJoinFriend, onParty, onJoinParty, onChangeOpponent }: Props) {
+  const account = useAccount()
   const [categoryId, setCategoryId] = useState<CategoryId>(getLastCategory)
   const opponent = getLastOpponent()
+  const [pace, setPace] = useState<PaceMode>(getLastPace)
   const [joinCode, setJoinCode] = useState('')
   const [joinError, setJoinError] = useState('')
   const [showRules, setShowRules] = useState(false)
+  const [showAccount, setShowAccount] = useState(false)
+  const [homeTab, setHomeTab] = useState<'play' | 'friends'>('play')
   const streak = getPlayStreak()
   const bests = useMemo(
     () => Object.fromEntries(topics.map((topic) => [topic.id, getBestScore(topic.id)])),
@@ -125,19 +144,21 @@ export function Home({ onPlay, onChallengeFriend, onJoinFriend, onChangeOpponent
   }
 
   return (
-    <main className="home">
+    <main className={`home${homeTab === 'friends' ? ' is-friends' : ''}`}>
       <header className="topbar">
         <div className="topbar-brand">
           <p className="logo">Quizline</p>
           <p className="home-meta">
-            {QUESTIONS_PER_MATCH} questions · {SECONDS_PER_QUESTION} seconds
+            {QUESTIONS_PER_MATCH} questions · {secondsForPace(pace)} seconds
           </p>
         </div>
         <div className="topbar-tools">
           <p className="streak-chip" title="Matches finished">
             Streak {streak}
           </p>
-          <Avatar name="You" hue="#ff2d6a" size="sm" />
+          <button type="button" className="account-btn" aria-label="Account and profile picture" onClick={() => setShowAccount(true)}>
+            <Avatar name={account.name || 'You'} avatar={account.avatarId} src={account.photoUrl} size="sm" />
+          </button>
           <button type="button" className="help-btn" aria-label="How to play" onClick={() => setShowRules(true)}>
             ?
           </button>
@@ -145,8 +166,19 @@ export function Home({ onPlay, onChallengeFriend, onJoinFriend, onChangeOpponent
         </div>
       </header>
 
+      {account.notice ? (
+        <p className="lobby-error auth-notice">
+          {account.notice}{' '}
+          <button type="button" className="text-link" onClick={() => account.clearNotice()}>
+            Dismiss
+          </button>
+        </p>
+      ) : null}
+
+      {homeTab === 'play' ? (
+        <>
       <section className="hero-row">
-        <article className="hero-card">
+        <article className="hero-card" style={{ ['--topic' as string]: TOPIC_HUE[categoryId] }} data-topic={categoryId}>
           <p className="eyebrow">Selected match</p>
           <h1>{category?.name ?? 'Daily Mix'}</h1>
           <div className="hero-chips">
@@ -154,12 +186,30 @@ export function Home({ onPlay, onChallengeFriend, onJoinFriend, onChangeOpponent
             {best > 0 ? <span className="diff-chip ghost-chip">Lv {levelFor(best)}</span> : <span className="diff-chip ghost-chip">NEW</span>}
           </div>
           <p className="hero-copy">{heroLine(categoryId, best, opponent)}</p>
+          <div className="mode-row" role="group" aria-label="Match pace">
+            {PACE_MODES.map((option) => (
+              <button
+                key={option}
+                type="button"
+                className={`mode-btn${pace === option ? ' is-on' : ''}`}
+                onClick={() => {
+                  setPace(option)
+                  saveLastPace(option)
+                }}
+              >
+                {PACE_LABEL[option]} · {secondsForPace(option)}s
+              </button>
+            ))}
+          </div>
           <div className="hero-actions">
-            <button type="button" className="play-cta" onClick={() => onPlay(categoryId)}>
+            <button type="button" className="play-cta" onClick={() => onPlay(categoryId, pace)}>
               Play now
             </button>
-            <button type="button" className="challenge-btn" onClick={() => onChallengeFriend(categoryId)}>
+            <button type="button" className="challenge-btn" onClick={() => onChallengeFriend(categoryId, pace)}>
               Challenge a friend
+            </button>
+            <button type="button" className="challenge-btn" onClick={() => onParty(categoryId, pace)}>
+              Party with friends
             </button>
           </div>
           <form
@@ -168,11 +218,12 @@ export function Home({ onPlay, onChallengeFriend, onJoinFriend, onChangeOpponent
               event.preventDefault()
               const invite = parseInvite(joinCode)
               if (!invite) {
-                setJoinError('Use the 6-character code from their link.')
+                setJoinError('Use the code from their invite link.')
                 return
               }
               setJoinError('')
-              onJoinFriend(invite.code, invite.categoryId)
+              if (invite.kind === 'party') onJoinParty(invite.code, invite.categoryId, invite.pace)
+              else onJoinFriend(invite.code, invite.categoryId, invite.pace)
             }}
           >
             <input
@@ -265,7 +316,24 @@ export function Home({ onPlay, onChallengeFriend, onJoinFriend, onChangeOpponent
           </li>
         </ul>
       </section>
+        </>
+      ) : (
+        <FriendsPanel
+          onNeedAccount={() => setShowAccount(true)}
+          onChallenge={() => onChallengeFriend(categoryId, pace)}
+        />
+      )}
 
+      <nav className="home-tabs" aria-label="Home">
+        <button type="button" className={homeTab === 'play' ? 'is-on' : ''} onClick={() => setHomeTab('play')}>
+          Play
+        </button>
+        <button type="button" className={homeTab === 'friends' ? 'is-on' : ''} onClick={() => setHomeTab('friends')}>
+          Friends
+        </button>
+      </nav>
+
+      {showAccount ? <AccountSheet onClose={() => setShowAccount(false)} /> : null}
       {showRules ? <RulesOverlay onClose={closeRules} /> : null}
     </main>
   )

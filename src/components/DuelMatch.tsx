@@ -3,9 +3,12 @@ import { getBot } from '../data/bots'
 import { getCategory } from '../data/questions'
 import { planBotAnswer } from '../lib/bot'
 import { dealMatch } from '../lib/deal'
-import { QUESTIONS_PER_MATCH, SECONDS_PER_QUESTION, scoreAnswer } from '../lib/game'
+import { COUNTDOWN_MS, COUNTDOWN_SECONDS, DIFFICULTY_LABEL, MAX_MATCH_SCORE, MAX_QUESTION_SCORE, PACE_LABEL, QUESTIONS_PER_MATCH, secondsForPace, scoreAnswer } from '../lib/game'
 import { getDuelRoom } from '../lib/onlineDuel'
-import type { CategoryId, Opponent, PlayQuestion } from '../types'
+import { useAccount } from '../lib/AccountContext'
+import type { CategoryId, Opponent, PaceMode, PlayQuestion } from '../types'
+import { HalfGlow } from './HalfGlow'
+import { MatchCountdown } from './MatchCountdown'
 import { MatchTimer } from './MatchTimer'
 import { PlayerRail } from './PlayerRail'
 
@@ -19,11 +22,13 @@ type SideState = {
 type Props = {
   categoryId: CategoryId
   opponent: Opponent
+  pace?: PaceMode
+  round?: number
+  goAt?: number
   onQuit: () => void
+  onLobby?: () => void
   onFinish: (you: { score: number; correct: number }, them: { name: string; score: number; correct: number }) => void
 }
-
-const QUESTION_MS = SECONDS_PER_QUESTION * 1000
 
 const TOPIC_HUE: Record<CategoryId, string> = {
   mix: '#ff2d6a',
@@ -38,15 +43,18 @@ const PREVIEW_QUESTION: PlayQuestion = {
   prompt: 'Fortnite is primarily a…',
   choices: ['Cooking show', 'Video game', 'Board game only', 'Radio station'],
   correctIndex: 1,
+  difficulty: 'medium',
 }
 
 function previewMode() {
   return typeof window !== 'undefined' && window.location.hash.startsWith('#preview-duel')
 }
 
-export function DuelMatch({ categoryId, opponent, onQuit, onFinish }: Props) {
+export function DuelMatch({ categoryId, opponent, pace = 'normal', round = 0, goAt, onQuit, onLobby, onFinish }: Props) {
+  const youLook = useAccount()
   const preview = previewMode()
   const previewReveal = typeof window !== 'undefined' && window.location.hash === '#preview-duel-reveal'
+  const questionMs = secondsForPace(pace) * 1000
   const online = opponent.kind === 'online'
   const isHost = online && opponent.role === 'host'
   const category = getCategory(categoryId)
@@ -68,17 +76,19 @@ export function DuelMatch({ categoryId, opponent, onQuit, onFinish }: Props) {
           : 'Opponent'
   const themHue = bot?.hue ?? '#0ea5e9'
   const topicHue = TOPIC_HUE[categoryId]
-  const seed = online ? opponent.roomId : undefined
+  const seed = online ? `${opponent.roomId}-r${round}` : undefined
 
   const deck = useMemo(() => {
     if (preview) return [PREVIEW_QUESTION]
     return category ? dealMatch(category, seed) : []
-  }, [category, preview, seed])
+  }, [categoryId, preview, seed])
 
   const [index, setIndex] = useState(0)
-  const [remainingMs, setRemainingMs] = useState(previewReveal ? 0 : preview ? 11000 : QUESTION_MS)
+  const [remainingMs, setRemainingMs] = useState(previewReveal ? 0 : preview ? 11000 : questionMs)
+  const [countingDown, setCountingDown] = useState(!preview)
+  const [countSec, setCountSec] = useState(COUNTDOWN_SECONDS)
   const [reveal, setReveal] = useState(previewReveal)
-  const [waitingStart, setWaitingStart] = useState(online && !isHost)
+  const [friendGone, setFriendGone] = useState(false)
   const [you, setYou] = useState<SideState>({ picked: null, score: 0, correct: 0, streak: 0 })
   const [them, setThem] = useState<SideState>(
     preview
@@ -91,26 +101,71 @@ export function DuelMatch({ categoryId, opponent, onQuit, onFinish }: Props) {
   const indexRef = useRef(0)
   const remainingRef = useRef(remainingMs)
   const resolvedRef = useRef(previewReveal)
+  const countingDownRef = useRef(!preview)
   const advanceRef = useRef<number | null>(null)
   const clockAtRef = useRef<number | null>(null)
+  const goAtRef = useRef<number | null>(preview ? Date.now() : (goAt ?? Date.now() + COUNTDOWN_MS))
+  const themPickIRef = useRef(-1)
   const themNameRef = useRef(themName)
   const onFinishRef = useRef(onFinish)
+  const onLobbyRef = useRef(onLobby)
 
-  youRef.current = you
-  themRef.current = them
-  themNameRef.current = themName
   onFinishRef.current = onFinish
+  onLobbyRef.current = onLobby
+  themNameRef.current = themName
+  countingDownRef.current = countingDown
 
   const question = deck[index]
 
+  function publishYou() {
+    if (!online) return
+    const y = youRef.current
+    room?.send({
+      t: 'pick',
+      i: indexRef.current,
+      c: y.picked ?? -1,
+      s: Math.max(0, Math.floor(remainingRef.current / 1000)),
+      score: y.score,
+      correct: y.correct,
+      streak: y.streak,
+    })
+  }
+
+  function applyThemSync(msg: { i: number; c: number; s: number; score?: number; correct?: number; streak?: number }) {
+    if (typeof msg.s === 'number' && (msg.s < 0 || msg.s > 15)) return
+    if (typeof msg.score === 'number') {
+      if (msg.i < themPickIRef.current) return
+      if (msg.score < themRef.current.score || msg.score > MAX_MATCH_SCORE) return
+      if (msg.score > themRef.current.score + MAX_QUESTION_SCORE) return
+      if (typeof msg.correct === 'number') {
+        if (msg.correct < themRef.current.correct || msg.correct > themRef.current.correct + 1) return
+        if (msg.correct > QUESTIONS_PER_MATCH) return
+      }
+      themPickIRef.current = msg.i
+      const next: SideState = {
+        picked: msg.c >= 0 ? msg.c : null,
+        score: msg.score,
+        correct: msg.correct ?? themRef.current.correct,
+        streak: msg.streak ?? themRef.current.streak,
+      }
+      themRef.current = next
+      setThem(next)
+      if (!resolvedRef.current && msg.i === indexRef.current && msg.c >= 0 && youRef.current.picked !== null) {
+        finishQuestion()
+      }
+      return
+    }
+    if (msg.i === indexRef.current) applyPick('them', msg.c, msg.s)
+  }
+
   function applyPick(side: 'you' | 'them', choiceIndex: number, remainingSeconds: number) {
     const currentQ = deck[indexRef.current]
-    if (resolvedRef.current || !currentQ) return
+    if (resolvedRef.current || countingDownRef.current || !currentQ) return
     const current = side === 'you' ? youRef.current : themRef.current
     if (current.picked !== null) return
 
     const isCorrect = choiceIndex === currentQ.correctIndex
-    const gained = isCorrect ? scoreAnswer(remainingSeconds, current.streak) : 0
+    const gained = isCorrect ? scoreAnswer(remainingSeconds, current.streak, currentQ.difficulty) : 0
     const next: SideState = {
       picked: choiceIndex,
       score: current.score + gained,
@@ -132,14 +187,17 @@ export function DuelMatch({ categoryId, opponent, onQuit, onFinish }: Props) {
   function beginQuestion(nextIndex: number, at: number) {
     indexRef.current = nextIndex
     resolvedRef.current = false
+    countingDownRef.current = false
     clockAtRef.current = at
-    remainingRef.current = QUESTION_MS
+    remainingRef.current = questionMs
+    youRef.current = { ...youRef.current, picked: null }
+    themRef.current = { ...themRef.current, picked: null }
+    setCountingDown(false)
     setIndex(nextIndex)
-    setRemainingMs(QUESTION_MS)
+    setRemainingMs(questionMs)
     setReveal(false)
-    setWaitingStart(false)
-    setYou((value) => ({ ...value, picked: null }))
-    setThem((value) => ({ ...value, picked: null }))
+    setYou(youRef.current)
+    setThem(themRef.current)
   }
 
   function finishQuestion() {
@@ -161,13 +219,16 @@ export function DuelMatch({ categoryId, opponent, onQuit, onFinish }: Props) {
     }
 
     if (preview) return
+    if (online) publishYou()
     if (online && isHost) room?.send({ t: 'reveal', i: indexRef.current })
     if (online && !isHost) return
 
     if (advanceRef.current) window.clearTimeout(advanceRef.current)
+    const settleMs = online && indexRef.current + 1 >= deck.length ? 1600 : 1100
     advanceRef.current = window.setTimeout(() => {
       const nextIndex = indexRef.current + 1
       if (nextIndex >= deck.length) {
+        if (online) publishYou()
         if (online && isHost) room?.send({ t: 'go', i: nextIndex, at: Date.now() })
         onFinishRef.current(
           { score: youRef.current.score, correct: youRef.current.correct },
@@ -178,17 +239,44 @@ export function DuelMatch({ categoryId, opponent, onQuit, onFinish }: Props) {
       const at = Date.now()
       beginQuestion(nextIndex, at)
       if (online && isHost) room?.send({ t: 'go', i: nextIndex, at })
-    }, 1100)
+    }, settleMs)
   }
 
   function chooseYou(choiceIndex: number) {
+    if (countingDownRef.current) return
     const remainingSeconds = Math.max(0, Math.floor(remainingRef.current / 1000))
     applyPick('you', choiceIndex, remainingSeconds)
-    if (online) room?.send({ t: 'pick', i: indexRef.current, c: choiceIndex, s: remainingSeconds })
+    publishYou()
   }
 
   useEffect(() => {
-    if (!question || reveal || preview || waitingStart) return undefined
+    if (preview || !countingDown) return undefined
+    let frame = 0
+    const tick = () => {
+      const until = goAtRef.current
+      if (until == null) {
+        setCountSec(COUNTDOWN_SECONDS)
+        frame = requestAnimationFrame(tick)
+        return
+      }
+      const left = until - Date.now()
+      if (left <= 0) {
+        countingDownRef.current = false
+        setCountingDown(false)
+        setCountSec(0)
+        remainingRef.current = questionMs
+        setRemainingMs(questionMs)
+        return
+      }
+      setCountSec(Math.max(1, Math.ceil(left / 1000)))
+      frame = requestAnimationFrame(tick)
+    }
+    frame = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frame)
+  }, [countingDown, preview, questionMs])
+
+  useEffect(() => {
+    if (!question || reveal || preview || countingDown) return undefined
     const started = performance.now()
     const startLeft = remainingRef.current
     let frame = 0
@@ -204,16 +292,16 @@ export function DuelMatch({ categoryId, opponent, onQuit, onFinish }: Props) {
     }
     frame = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(frame)
-  }, [question, reveal, index, preview, waitingStart, online, isHost])
+  }, [question, reveal, index, preview, online, isHost, countingDown])
 
   useEffect(() => {
-    if (!question || !bot || reveal || preview || themRef.current.picked !== null) return undefined
-    const plan = planBotAnswer(bot, question.correctIndex, question.choices.length)
+    if (!question || !bot || reveal || preview || countingDown || themRef.current.picked !== null) return undefined
+    const plan = planBotAnswer(bot, question.correctIndex, question.choices.length, pace)
     const id = window.setTimeout(() => {
       applyPick('them', plan.choiceIndex, Math.max(0, Math.floor(remainingRef.current / 1000)))
     }, plan.delayMs)
     return () => window.clearTimeout(id)
-  }, [question, bot, reveal, index, preview])
+  }, [question, bot, reveal, index, preview, pace, countingDown])
 
   useEffect(() => {
     function syncPreviewHash() {
@@ -229,19 +317,59 @@ export function DuelMatch({ categoryId, opponent, onQuit, onFinish }: Props) {
 
   useEffect(() => {
     if (!online || !room) return undefined
-    if (isHost) {
-      const at = Date.now()
+    let acked = isHost
+    let startTimer = 0
+
+    function sendStart(forceNewClock = false) {
+      let at = clockAtRef.current ?? goAtRef.current ?? Date.now()
+      if (forceNewClock || clockAtRef.current == null) {
+        at = indexRef.current === 0 ? (goAtRef.current ?? Date.now() + COUNTDOWN_MS) : Date.now()
+      }
       clockAtRef.current = at
-      room.send({ t: 'start', i: 0, at })
+      room?.send({ t: 'start', i: indexRef.current, at })
+    }
+
+    if (isHost) {
+      sendStart(true)
+      startTimer = window.setInterval(() => {
+        if (!acked) sendStart()
+      }, 800)
+    } else {
+      room.send({ t: 'need' })
     }
 
     const stop = room.subscribe((msg) => {
-      if (msg.t === 'hello' && msg.name) themNameRef.current = msg.name
-      if (msg.t === 'start' && !isHost) {
-        beginQuestion(msg.i, msg.at)
+      if (msg.t === 'lobby') {
+        onLobbyRef.current?.()
+        return
       }
-      if (msg.t === 'pick' && msg.i === indexRef.current) {
-        applyPick('them', msg.c, msg.s)
+      if (msg.t === 'hello' && msg.name) themNameRef.current = msg.name
+      if (msg.t === 'need' && isHost) sendStart()
+      if (msg.t === 'here' && isHost) acked = true
+      if (msg.t === 'start' && !isHost) {
+        room.send({ t: 'here' })
+        if (youRef.current.picked !== null) return
+        clockAtRef.current = msg.at
+        if (msg.i === 0 && Date.now() < msg.at) {
+          goAtRef.current = msg.at
+          countingDownRef.current = true
+          setCountingDown(true)
+          return
+        }
+        if (msg.i !== indexRef.current) {
+          beginQuestion(msg.i, msg.at)
+          return
+        }
+        countingDownRef.current = false
+        setCountingDown(false)
+        const elapsed = Date.now() - msg.at
+        if (elapsed > 250 && elapsed < questionMs) {
+          remainingRef.current = Math.max(0, questionMs - elapsed)
+          setRemainingMs(remainingRef.current)
+        }
+      }
+      if (msg.t === 'pick') {
+        applyThemSync(msg)
       }
       if (msg.t === 'reveal' && !isHost && msg.i === indexRef.current) {
         finishQuestion()
@@ -258,13 +386,21 @@ export function DuelMatch({ categoryId, opponent, onQuit, onFinish }: Props) {
       }
     })
 
-    room.room.onPeerLeave = () => {
-      setWaitingStart(true)
+    room.onPeerJoin = () => {
+      setFriendGone(false)
+      if (isHost) sendStart()
+      else room.send({ t: 'need' })
+    }
+    room.onPeerLeave = () => {
+      setFriendGone(true)
+      acked = false
     }
 
     return () => {
       stop()
-      room.room.onPeerLeave = null
+      if (startTimer) window.clearInterval(startTimer)
+      room.onPeerJoin = null
+      room.onPeerLeave = null
     }
   }, [online, isHost, room, deck.length])
 
@@ -287,14 +423,18 @@ export function DuelMatch({ categoryId, opponent, onQuit, onFinish }: Props) {
 
   const youLocked = you.picked !== null
   const themLocked = them.picked !== null
+  const halfGone = !countingDown && remainingMs > 0 && remainingMs <= questionMs / 2
 
   return (
-    <main className="playfield" style={{ ['--topic' as string]: topicHue }}>
+    <main className={`playfield${halfGone && !preview ? ' is-urgent' : ''}`} style={{ ['--topic' as string]: topicHue }}>
+      {countingDown ? <MatchCountdown seconds={countSec} /> : null}
+      <HalfGlow active={!preview && halfGone} />
       <header className="play-top">
         <button type="button" className="exit-btn" onClick={onQuit}>
           Exit
         </button>
         <p className="topic-chip">{category.name}</p>
+        {pace !== 'normal' ? <p className="topic-chip ghost-chip">{PACE_LABEL[pace]}</p> : null}
         <p className="top-clock" aria-hidden="true">
           {Math.max(0, Math.ceil(remainingMs / 1000))}
           <span>s</span>
@@ -309,25 +449,31 @@ export function DuelMatch({ categoryId, opponent, onQuit, onFinish }: Props) {
         </div>
       </header>
 
-      {waitingStart ? <p className="lock-banner">Waiting for the other player…</p> : null}
+      {friendGone ? <p className="lock-banner">Friend reconnecting… you can still answer</p> : null}
 
       <div className="play-body">
         <PlayerRail
-          name="You"
+          name={youLook.name || 'You'}
           tag={online ? 'Live' : 'Playing'}
           hue="#ff2d6a"
           score={you.score}
           locked={youLocked}
           waiting={!youLocked}
           timedOut={reveal && !youLocked}
+          avatar={youLook.avatarId}
+          src={youLook.photoUrl}
         />
 
         <section className="play-center">
-          <MatchTimer remainingMs={waitingStart ? QUESTION_MS : remainingMs} totalMs={QUESTION_MS} />
+          <MatchTimer remainingMs={remainingMs} totalMs={questionMs} />
           <h1>{question.prompt}</h1>
-          {themLocked && !reveal ? <p className="lock-banner">{themName} locked in</p> : null}
-          {youLocked && !reveal ? <p className="lock-banner you-lock">You locked in</p> : null}
-          <ol className="answer-grid">
+          <p className="q-diff">{DIFFICULTY_LABEL[question.difficulty]}</p>
+          <div className="answer-wrap">
+            <div className="lock-slot" aria-live="polite">
+              {themLocked && !reveal ? <p className="lock-banner">{themName} locked in</p> : null}
+              {youLocked && !reveal ? <p className="lock-banner you-lock">You locked in</p> : null}
+            </div>
+            <ol className="answer-grid">
             {question.choices.map((choice, choiceIndex) => {
               const yours = you.picked === choiceIndex
               const theirs = them.picked === choiceIndex
@@ -341,7 +487,7 @@ export function DuelMatch({ categoryId, opponent, onQuit, onFinish }: Props) {
                   <button
                     type="button"
                     className={classes.join(' ')}
-                    disabled={reveal || youLocked || waitingStart}
+                    disabled={countingDown || reveal || youLocked}
                     onClick={() => chooseYou(choiceIndex)}
                   >
                     {choice}
@@ -351,6 +497,7 @@ export function DuelMatch({ categoryId, opponent, onQuit, onFinish }: Props) {
               )
             })}
           </ol>
+          </div>
         </section>
 
         <PlayerRail
@@ -361,6 +508,8 @@ export function DuelMatch({ categoryId, opponent, onQuit, onFinish }: Props) {
           locked={themLocked}
           waiting={!themLocked}
           timedOut={reveal && !themLocked}
+          avatar={opponent.kind === 'online' ? opponent.friendAvatar : undefined}
+          src={opponent.kind === 'online' ? opponent.friendPhoto : undefined}
         />
       </div>
     </main>

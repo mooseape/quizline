@@ -1,3 +1,4 @@
+import { DIFFICULTY_LABEL } from '../lib/game'
 import type { PlayQuestion } from '../types'
 
 type Props = {
@@ -33,6 +34,7 @@ export function PlayerPane({
         <p className="score">{score} pts</p>
       </header>
       <h2>{question.prompt}</h2>
+      <p className="q-diff">{DIFFICULTY_LABEL[question.difficulty]}</p>
       <ol className="choices pane-choices">
         {question.choices.map((choice, choiceIndex) => {
           let tone = ''

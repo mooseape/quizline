@@ -1,6 +1,13 @@
-import type { PlayQuestion } from '../types'
-import { QUESTIONS_PER_MATCH, shuffle } from '../lib/game'
-import type { Category } from '../types'
+import { getSeenQuestionIds, rememberQuestionIds } from './storage'
+import { QUESTIONS_PER_MATCH, shuffle } from './game'
+import type { Category, PlayQuestion, Question, QuestionDifficulty } from '../types'
+
+const LEVELS: QuestionDifficulty[] = ['easy', 'medium', 'hard']
+const PER_LEVEL: Record<QuestionDifficulty, number> = {
+  easy: 3,
+  medium: 4,
+  hard: 3,
+}
 
 function hashString(value: string) {
   let hash = 2166136261
@@ -25,23 +32,63 @@ function seededShuffle<T>(items: T[], seed: string): T[] {
   return next
 }
 
-function todayKey() {
-  const now = new Date()
-  return `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`
+function levelOf(question: Question): QuestionDifficulty {
+  return question.difficulty ?? 'medium'
+}
+
+function mix<T>(items: T[], seed: string | undefined, salt: string) {
+  return seed ? seededShuffle(items, `${seed}-${salt}`) : shuffle(items)
+}
+
+function pickBalanced(questions: Question[], seed: string | undefined, avoid: Set<string>): Question[] {
+  const buckets: Record<QuestionDifficulty, Question[]> = { easy: [], medium: [], hard: [] }
+  for (const question of questions) buckets[levelOf(question)].push(question)
+
+  const picked: Question[] = []
+  const used = new Set<string>()
+
+  for (const level of LEVELS) {
+    const shuffled = mix(buckets[level], seed, level)
+    const fresh = shuffled.filter((question) => !avoid.has(question.id))
+    const pool = fresh.length >= PER_LEVEL[level] ? fresh : shuffled
+    for (const question of pool.slice(0, PER_LEVEL[level])) {
+      picked.push(question)
+      used.add(question.id)
+    }
+  }
+
+  if (picked.length < QUESTIONS_PER_MATCH) {
+    const rest = mix(questions, seed, 'fill').filter((question) => !used.has(question.id))
+    picked.push(...rest.slice(0, QUESTIONS_PER_MATCH - picked.length))
+  }
+
+  return mix(picked, seed, 'order')
 }
 
 export function dealMatch(category: Category, seed?: string): PlayQuestion[] {
-  const poolSeed = seed ?? (category.id === 'mix' ? `mix-${todayKey()}` : undefined)
-  const pool = poolSeed ? seededShuffle(category.questions, poolSeed) : shuffle(category.questions)
+  const seen = seed ? [] : getSeenQuestionIds(category.id)
+  const unseenCount = category.questions.filter((question) => !seen.includes(question.id)).length
+  const recycled = !seed && unseenCount < QUESTIONS_PER_MATCH
+  const avoid = recycled ? new Set<string>() : new Set(seen)
+  const dealt = pickBalanced(category.questions, seed, avoid).slice(0, QUESTIONS_PER_MATCH)
 
-  return pool.slice(0, QUESTIONS_PER_MATCH).map((question) => {
+  if (!seed) {
+    rememberQuestionIds(
+      category.id,
+      dealt.map((question) => question.id),
+      recycled ? dealt.length : category.questions.length,
+    )
+  }
+
+  return dealt.map((question) => {
     const indexed = question.choices.map((text, index) => ({ text, index }))
-    const shuffled = poolSeed ? seededShuffle(indexed, `${poolSeed}-${question.id}`) : shuffle(indexed)
+    const mixed = mix(indexed, seed, question.id)
     return {
       id: question.id,
       prompt: question.prompt,
-      choices: shuffled.map((choice) => choice.text),
-      correctIndex: shuffled.findIndex((choice) => choice.index === question.correctIndex),
+      choices: mixed.map((choice) => choice.text),
+      correctIndex: mixed.findIndex((choice) => choice.index === question.correctIndex),
+      difficulty: levelOf(question),
     }
   })
 }

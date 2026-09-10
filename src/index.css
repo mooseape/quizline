@@ -73,6 +73,18 @@ html[data-theme='dark'] {
   border-inline: none;
 }
 
+#root:has(.party-room) {
+  width: 1120px;
+  max-width: 100%;
+  border-inline: none;
+}
+
+#root:has(.duel-invite) {
+  width: 840px;
+  max-width: 100%;
+  border-inline: none;
+}
+
 #root:has(.playfield),
 #root:has(.duel) {
   width: 1080px;
