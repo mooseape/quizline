@@ -1,10 +1,17 @@
 import type { Bot } from '../data/bots'
-import { SECONDS_PER_QUESTION } from './game'
+import { secondsForPace } from './game'
+import type { PaceMode } from '../types'
 
-export function planBotAnswer(bot: Bot, correctIndex: number, choiceCount: number) {
-  const maxDelay = SECONDS_PER_QUESTION * 1000 - 250
-  const lo = Math.min(bot.minDelayMs, maxDelay)
-  const hi = Math.min(bot.maxDelayMs, maxDelay)
+export function planBotAnswer(
+  bot: Bot,
+  correctIndex: number,
+  choiceCount: number,
+  pace: PaceMode = 'rapid',
+) {
+  const maxDelay = Math.max(200, secondsForPace(pace) * 1000 - 250)
+  const scale = maxDelay / (15 * 1000 - 250)
+  const lo = Math.min(bot.minDelayMs * scale, maxDelay)
+  const hi = Math.min(bot.maxDelayMs * scale, maxDelay)
   const delayMs = Math.round(lo + Math.random() * Math.max(0, hi - lo))
   const correct = Math.random() < bot.accuracy
   if (correct) return { delayMs, choiceIndex: correctIndex }

@@ -1,16 +1,12 @@
-import { QUESTIONS_PER_MATCH } from '../lib/game'
+import { useEffect, useRef } from 'react'
+import { PACE_LABEL, QUESTIONS_PER_MATCH, secondsForPace } from '../lib/game'
 import { getCategory } from '../data/questions'
 import { getBot } from '../data/bots'
-import type { CategoryId, Opponent } from '../types'
+import { getDuelRoom } from '../lib/onlineDuel'
+import type { CategoryId, Opponent, PaceMode } from '../types'
+import { useAccount } from '../lib/AccountContext'
+import { TOPIC_HUE } from '../lib/topics'
 import { Avatar } from './Avatar'
-
-const TOPIC_HUE: Record<CategoryId, string> = {
-  mix: '#ff2d6a',
-  general: '#e39b00',
-  science: '#0ea5a0',
-  history: '#e86a00',
-  pop: '#6d3dff',
-}
 
 type Props = {
   categoryId: CategoryId
@@ -18,7 +14,10 @@ type Props = {
   you: { score: number; correct: number }
   them?: { name: string; score: number; correct: number }
   previousBest: number
+  pace?: PaceMode
   onReplay: () => void
+  onSameLobby?: () => void
+  onBegin?: (categoryId: CategoryId, pace: PaceMode, round: number, goAt: number) => void
   onHome: () => void
 }
 
@@ -70,9 +69,13 @@ export function Result({
   you,
   them,
   previousBest,
+  pace,
   onReplay,
+  onSameLobby,
+  onBegin,
   onHome,
 }: Props) {
+  const youLook = useAccount()
   const category = getCategory(categoryId)
   const topic = category?.name ?? 'Match'
   const hue = TOPIC_HUE[categoryId]
@@ -81,6 +84,28 @@ export function Result({
   const draw = versus && them != null && you.score === them.score
   const youWon = versus && them != null ? you.score > them.score : you.score > previousBest
   const isNewBest = you.score > previousBest && you.score > 0
+  const online = opponent.kind === 'online'
+  const onSameLobbyRef = useRef(onSameLobby)
+  const onBeginRef = useRef(onBegin)
+  onSameLobbyRef.current = onSameLobby
+  onBeginRef.current = onBegin
+
+  useEffect(() => {
+    if (!online) return undefined
+    const room = getDuelRoom()
+    if (!room) return undefined
+    return room.subscribe((msg) => {
+      if (msg.t === 'lobby') onSameLobbyRef.current?.()
+      if (msg.t === 'begin' && opponent.kind === 'online' && opponent.role === 'guest') {
+        onBeginRef.current?.(msg.categoryId, msg.pace, msg.round, msg.at)
+      }
+    })
+  }, [online, opponent.kind === 'online' ? opponent.roomId : ''])
+
+  function backToLobby() {
+    if (online && opponent.role === 'host') getDuelRoom()?.send({ t: 'lobby', round: 0 })
+    onSameLobby?.()
+  }
 
   let headline = 'Round over'
   if (versus && draw) headline = 'Draw'
@@ -106,6 +131,7 @@ export function Result({
       <header className="results-banner">
         <p className="topic-chip">
           {topic} · vs {rival.name}
+          {pace ? ` · ${PACE_LABEL[pace]} ${secondsForPace(pace)}s` : ''}
         </p>
         <h1>{headline}</h1>
       </header>
@@ -118,8 +144,8 @@ export function Result({
                 Win
               </span>
             ) : null}
-            <Avatar name="You" hue="#ff2d6a" size="lg" />
-            <strong>You</strong>
+            <Avatar name={youLook.name || 'You'} hue="#ff2d6a" size="lg" avatar={youLook.avatarId} src={youLook.photoUrl} />
+            <strong>{youLook.name || 'You'}</strong>
             <p className="face-pts">{formatPts(you.score)}</p>
             <p className="face-hits">
               {you.correct}/{QUESTIONS_PER_MATCH}
@@ -143,7 +169,13 @@ export function Result({
                     Win
                   </span>
                 ) : null}
-                <Avatar name={them.name} hue={rival.hue} size="lg" />
+                <Avatar
+                  name={them.name}
+                  hue={rival.hue}
+                  size="lg"
+                  avatar={opponent.kind === 'online' ? opponent.friendAvatar : undefined}
+                  src={opponent.kind === 'online' ? opponent.friendPhoto : undefined}
+                />
                 <strong>{them.name}</strong>
                 <p className="face-pts">{formatPts(them.score)}</p>
                 <p className="face-hits">
@@ -168,8 +200,12 @@ export function Result({
           <CorrectDots correct={you.correct} total={QUESTIONS_PER_MATCH} />
           <p className="results-flavor">{flavor}</p>
           <div className="results-actions">
-            <button type="button" className="play-cta" onClick={onReplay}>
-              Play again
+            <button type="button" className="play-cta" onClick={online && onSameLobby ? backToLobby : onReplay}>
+              {online && opponent.kind === 'online' && opponent.ranked
+                ? 'Find another'
+                : online && onSameLobby
+                  ? 'Same lobby'
+                  : 'Play again'}
             </button>
             <button type="button" className="challenge-btn" onClick={onHome}>
               Home

@@ -1,4 +1,5 @@
 import type { Category } from '../types'
+import { extraById } from './extraQuestions'
 
 export const categories: Category[] = [
   {
@@ -198,6 +199,7 @@ export const categories: Category[] = [
         choices: ['Hill', 'Valley', 'Mountain', 'Plain'],
         correctIndex: 2,
       },
+      ...extraById.general,
     ],
   },
   {
@@ -397,6 +399,7 @@ export const categories: Category[] = [
         choices: ['Andromeda Galaxy only', 'Alpha Centauri system', 'Orion Nebula only', 'Pleiades'],
         correctIndex: 1,
       },
+      ...extraById.science,
     ],
   },
   {
@@ -596,6 +599,7 @@ export const categories: Category[] = [
         choices: ['Julius Caesar', 'Alexander the Great', 'Hannibal', 'Napoleon'],
         correctIndex: 2,
       },
+      ...extraById.history,
     ],
   },
   {
@@ -795,18 +799,37 @@ export const categories: Category[] = [
         choices: ['Tax law', 'Superheroes', 'Farming manuals', 'Weather maps'],
         correctIndex: 1,
       },
+      ...extraById.pop,
     ],
+  },
+  {
+    id: 'math',
+    name: 'Math',
+    blurb: 'Numbers, shapes, and logic',
+    questions: extraById.math,
+  },
+  {
+    id: 'geography',
+    name: 'Geography',
+    blurb: 'Places, maps, and Earth',
+    questions: extraById.geography,
+  },
+  {
+    id: 'sports',
+    name: 'Sports',
+    blurb: 'Games, scores, and champions',
+    questions: extraById.sports,
   },
 ]
 
+const mixCategory = {
+  id: 'mix' as const,
+  name: 'Daily mix',
+  blurb: 'A bit of every category',
+  questions: categories.flatMap((category) => category.questions),
+}
+
 export function getCategory(id: string) {
-  if (id === 'mix') {
-    return {
-      id: 'mix' as const,
-      name: 'Daily mix',
-      blurb: 'A bit of every category',
-      questions: categories.flatMap((category) => category.questions),
-    }
-  }
+  if (id === 'mix') return mixCategory
   return categories.find((category) => category.id === id)
 }

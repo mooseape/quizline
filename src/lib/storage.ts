@@ -1,5 +1,7 @@
-import type { CategoryId, Opponent } from '../types'
+import type { CategoryId, Opponent, PaceMode } from '../types'
+import { isPaceMode } from './game'
 import { bots } from '../data/bots'
+import { isCategoryId } from './topics'
 
 const key = (categoryId: CategoryId) => `quizline-best-${categoryId}`
 const LAST_CATEGORY = 'quizline-last-category'
@@ -22,9 +24,7 @@ export function saveBestScore(categoryId: CategoryId, score: number): number {
 
 export function getLastCategory(): CategoryId {
   const raw = localStorage.getItem(LAST_CATEGORY)
-  if (raw === 'mix' || raw === 'general' || raw === 'science' || raw === 'history' || raw === 'pop') {
-    return raw
-  }
+  if (isCategoryId(raw)) return raw
   return 'mix'
 }
 
@@ -49,6 +49,18 @@ export function saveLastOpponent(opponent: Opponent) {
   localStorage.setItem(LAST_OPPONENT, JSON.stringify(opponent))
 }
 
+const LAST_PACE = 'quizline-last-pace'
+
+export function getLastPace(): PaceMode {
+  const raw = localStorage.getItem(LAST_PACE)
+  if (isPaceMode(raw)) return raw
+  return 'rapid'
+}
+
+export function saveLastPace(pace: PaceMode) {
+  localStorage.setItem(LAST_PACE, pace)
+}
+
 export function hasSeenRules(): boolean {
   return localStorage.getItem(SEEN_RULES) === '1'
 }
@@ -66,4 +78,31 @@ export function getPlayStreak(): number {
 
 export function bumpPlayStreak() {
   localStorage.setItem(STREAK_KEY, String(getPlayStreak() + 1))
+}
+
+function seenKey(categoryId: string) {
+  return `quizline-seen-${categoryId}`
+}
+
+export function getSeenQuestionIds(categoryId: string): string[] {
+  try {
+    const raw = localStorage.getItem(seenKey(categoryId))
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as unknown
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter((id): id is string => typeof id === 'string')
+  } catch {
+    return []
+  }
+}
+
+export function rememberQuestionIds(categoryId: string, ids: string[], poolSize: number) {
+  const unique = [...new Set(ids)]
+  const previous = getSeenQuestionIds(categoryId).filter((id) => !unique.includes(id))
+  const next = [...unique, ...previous].slice(0, Math.max(poolSize, unique.length))
+  localStorage.setItem(seenKey(categoryId), JSON.stringify(next))
+}
+
+export function clearSeenQuestionIds(categoryId: string) {
+  localStorage.removeItem(seenKey(categoryId))
 }

@@ -34,6 +34,21 @@ export function TopicIcon({ id }: Props) {
       {id === 'pop' ? (
         <path fill="currentColor" d="M8 5v14l12-7L8 5z" />
       ) : null}
+      {id === 'math' ? (
+        <path fill="currentColor" d="M11 3h2v8h8v2h-8v8h-2v-8H3v-2h8V3z" />
+      ) : null}
+      {id === 'geography' ? (
+        <path
+          fill="currentColor"
+          d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z"
+        />
+      ) : null}
+      {id === 'sports' ? (
+        <path
+          fill="currentColor"
+          d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm-1 2.1A8 8 0 0 0 4.2 11H7.4A12 12 0 0 1 11 4.1zm2 0A12 12 0 0 1 16.6 11h3.2A8 8 0 0 0 13 4.1zM4.2 13A8 8 0 0 0 11 19.9 12 12 0 0 1 7.4 13H4.2zm5.4 0A10 10 0 0 0 12 19.2 10 10 0 0 0 14.4 13H9.6zm6.8 0A12 12 0 0 1 13 19.9 8 8 0 0 0 19.8 13H16.6z"
+        />
+      ) : null}
       {id === 'more' ? (
         <path fill="currentColor" d="M6 11h4v4H6v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4z" />
       ) : null}
