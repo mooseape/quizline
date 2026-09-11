@@ -1,5 +1,6 @@
 import type { Question, QuestionDifficulty } from '../types'
 import { generalPad, geographyPack, historyPad, mathPack, popPad, sciencePad, sportsPack } from './categoryPacks'
+import { moreById } from './moreQuestions'
 
 export function item(
   id: string,
@@ -74,6 +75,7 @@ export const extraById = {
     item('g91', 'hard', 'Which organelle is called the powerhouse of the cell in popular science?', ['Nucleus', 'Mitochondrion', 'Ribosome', 'Golgi body'], 1),
     item('g92', 'hard', 'The longest river entirely in one country (by common ranking) among these is the…', ['Nile', 'Yangtze', 'Amazon', 'Congo'], 1),
     ...generalPad,
+    ...moreById.general,
   ],
   science: [
     item('s33', 'easy', 'How many legs does a typical spider have?', ['6', '8', '10', '12'], 1),
@@ -137,6 +139,7 @@ export const extraById = {
     item('s91', 'hard', 'Type Ia supernovae are used as…', ['Kitchen timers', 'Standard candles', 'Ocean buoys', 'Soil pH kits'], 1),
     item('s92', 'hard', 'The Pauli exclusion principle applies to…', ['Photons only', 'Fermions', 'All bosons only', 'Empty space'], 1),
     ...sciencePad,
+    ...moreById.science,
   ],
   history: [
     item('h33', 'easy', 'The pyramids of Giza are in which country?', ['Mexico', 'Egypt', 'India', 'Greece'], 1),
@@ -200,6 +203,7 @@ export const extraById = {
     item('h91', 'hard', 'The city of Timbuktu flourished as a center of learning in…', ['West Africa', 'Siberia', 'Patagonia', 'New Zealand'], 0),
     item('h92', 'hard', 'The Peace of Augsburg (1555) dealt with religion in the…', ['Holy Roman Empire', 'Ottoman Egypt', 'Ming China', 'Inca Andes'], 0),
     ...historyPad,
+    ...moreById.history,
   ],
   pop: [
     item('p33', 'easy', 'Mickey Mouse was created by which company?', ['Warner Bros.', 'Disney', 'Pixar only', 'DreamWorks only'], 1),
@@ -263,8 +267,9 @@ export const extraById = {
     item('p91', 'hard', 'The first Super Mario Bros. game on the Famicom/NES is from…', ['1983', '1985', '1988', '1990'], 1),
     item('p92', 'hard', 'Who directed Parasite (2019)?', ['Bong Joon-ho', 'Park Chan-wook', 'Lee Chang-dong', 'Kim Ki-duk'], 0),
     ...popPad,
+    ...moreById.pop,
   ],
-  math: mathPack,
-  geography: geographyPack,
-  sports: sportsPack,
+  math: [...mathPack, ...moreById.math],
+  geography: [...geographyPack, ...moreById.geography],
+  sports: [...sportsPack, ...moreById.sports],
 } satisfies Record<'general' | 'science' | 'history' | 'pop' | 'math' | 'geography' | 'sports', Question[]>

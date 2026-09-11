@@ -1,6 +1,15 @@
 export type PaceMode = 'bullet' | 'blitz' | 'rapid'
 
-export type CategoryId = 'mix' | 'general' | 'science' | 'history' | 'pop' | 'math' | 'geography' | 'sports'
+export type CategoryId =
+  | 'mix'
+  | 'general'
+  | 'science'
+  | 'history'
+  | 'pop'
+  | 'math'
+  | 'geography'
+  | 'sports'
+  | 'flags'
 
 export type QuestionDifficulty = 'easy' | 'medium' | 'hard'
 
@@ -10,6 +19,7 @@ export type Question = {
   choices: [string, string, string, string]
   correctIndex: 0 | 1 | 2 | 3
   difficulty?: QuestionDifficulty
+  flagCode?: string
 }
 
 export type Category = {
@@ -25,6 +35,7 @@ export type PlayQuestion = {
   choices: string[]
   correctIndex: number
   difficulty: QuestionDifficulty
+  flagCode?: string
 }
 
 export type PartyPlayer = {

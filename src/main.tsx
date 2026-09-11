@@ -3,6 +3,9 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { AccountProvider } from './lib/AccountContext.tsx'
+import { installUiSounds } from './lib/sfx'
+
+installUiSounds()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

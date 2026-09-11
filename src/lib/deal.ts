@@ -89,6 +89,7 @@ export function dealMatch(category: Category, seed?: string): PlayQuestion[] {
       choices: mixed.map((choice) => choice.text),
       correctIndex: mixed.findIndex((choice) => choice.index === question.correctIndex),
       difficulty: levelOf(question),
+      flagCode: question.flagCode,
     }
   })
 }

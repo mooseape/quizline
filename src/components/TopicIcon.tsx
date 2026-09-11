@@ -49,6 +49,12 @@ export function TopicIcon({ id }: Props) {
           d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm-1 2.1A8 8 0 0 0 4.2 11H7.4A12 12 0 0 1 11 4.1zm2 0A12 12 0 0 1 16.6 11h3.2A8 8 0 0 0 13 4.1zM4.2 13A8 8 0 0 0 11 19.9 12 12 0 0 1 7.4 13H4.2zm5.4 0A10 10 0 0 0 12 19.2 10 10 0 0 0 14.4 13H9.6zm6.8 0A12 12 0 0 1 13 19.9 8 8 0 0 0 19.8 13H16.6z"
         />
       ) : null}
+      {id === 'flags' ? (
+        <path
+          fill="currentColor"
+          d="M5 3h2v18H5V3zm3 1h11l-2.2 3.5L19 11H8V4z"
+        />
+      ) : null}
       {id === 'more' ? (
         <path fill="currentColor" d="M6 11h4v4H6v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4z" />
       ) : null}

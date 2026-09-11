@@ -9,6 +9,7 @@ export const TOPIC_HUE: Record<CategoryId, string> = {
   math: '#2563eb',
   geography: '#16a34a',
   sports: '#e11d48',
+  flags: '#0f766e',
 }
 
 export function isCategoryId(value: unknown): value is CategoryId {

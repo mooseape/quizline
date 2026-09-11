@@ -38,6 +38,7 @@ export function secondsForPace(pace: PaceMode) {
 }
 export const BASE_POINTS = 100
 export const TIME_BONUS = 10
+export const STREAK_BONUS = 15
 export const DIFFICULTY_SCORE: Record<QuestionDifficulty, number> = {
   easy: 1,
   medium: 1.25,
@@ -46,14 +47,15 @@ export const DIFFICULTY_SCORE: Record<QuestionDifficulty, number> = {
 
 export function scoreAnswer(
   remainingSeconds: number,
+  streak: number,
   difficulty: QuestionDifficulty = 'easy',
 ): number {
   if (remainingSeconds < 0) return 0
-  const raw = BASE_POINTS + remainingSeconds * TIME_BONUS
+  const raw = BASE_POINTS + remainingSeconds * TIME_BONUS + Math.max(0, streak) * STREAK_BONUS
   return Math.round(raw * DIFFICULTY_SCORE[difficulty])
 }
 
-export const MAX_QUESTION_SCORE = scoreAnswer(10, 'hard')
+export const MAX_QUESTION_SCORE = scoreAnswer(10, QUESTIONS_PER_MATCH - 1, 'hard')
 export const MAX_MATCH_SCORE = MAX_QUESTION_SCORE * QUESTIONS_PER_MATCH
 
 export function shuffle<T>(items: T[]): T[] {

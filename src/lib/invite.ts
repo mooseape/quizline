@@ -10,6 +10,7 @@ const CAT_CHAR: Record<CategoryId, string> = {
   math: 'A',
   geography: 'E',
   sports: 'O',
+  flags: 'F',
 }
 const CHAR_CAT: Record<string, CategoryId> = {
   M: 'mix',
@@ -20,6 +21,7 @@ const CHAR_CAT: Record<string, CategoryId> = {
   A: 'math',
   E: 'geography',
   O: 'sports',
+  F: 'flags',
 }
 const PACE_CHAR: Record<PaceMode, string> = {
   bullet: 'T',

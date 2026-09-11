@@ -16,6 +16,8 @@ import { Avatar } from './Avatar'
 import { HalfGlow } from './HalfGlow'
 import { MatchCountdown } from './MatchCountdown'
 import { MatchTimer } from './MatchTimer'
+import { QuestionPrompt } from './QuestionPrompt'
+import { playSfx } from '../lib/sfx'
 
 type Seat = {
   id: string
@@ -26,6 +28,7 @@ type Seat = {
   picked: number | null
   score: number
   correct: number
+  streak: number
 }
 
 type Props = {
@@ -58,6 +61,7 @@ function emptySeats(players: PartyPlayer[]): Seat[] {
     picked: null,
     score: 0,
     correct: 0,
+    streak: 0,
   }))
 }
 
@@ -125,7 +129,8 @@ export function PartyMatch({
     if (!current || current.picked !== null) return
 
     const isCorrect = choiceIndex === currentQ.correctIndex
-    const gained = isCorrect ? scoreAnswer(remainingSeconds, currentQ.difficulty) : 0
+    if (playerId === selfId) playSfx(isCorrect ? 'correct' : 'wrong')
+    const gained = isCorrect ? scoreAnswer(remainingSeconds, current.streak, currentQ.difficulty) : 0
     const next = seatsRef.current.map((seat) =>
       seat.id === playerId
         ? {
@@ -133,6 +138,7 @@ export function PartyMatch({
             picked: choiceIndex,
             score: seat.score + gained,
             correct: seat.correct + (isCorrect ? 1 : 0),
+            streak: isCorrect ? seat.streak + 1 : 0,
           }
         : seat,
     )
@@ -161,6 +167,12 @@ export function PartyMatch({
     if (resolvedRef.current) return
     resolvedRef.current = true
     setReveal(true)
+    if (seatsRef.current.find((seat) => seat.id === selfId)?.picked === null) playSfx('wrong')
+    setSeats((value) => {
+      const next = value.map((seat) => (seat.picked === null ? { ...seat, streak: 0 } : seat))
+      seatsRef.current = next
+      return next
+    })
 
     if (!isHost) return
     room?.send({ t: 'reveal', i: indexRef.current })
@@ -304,7 +316,7 @@ export function PartyMatch({
 
         <section className="play-center">
           <MatchTimer remainingMs={remainingMs} totalMs={questionMs} />
-          <h1>{question.prompt}</h1>
+          <QuestionPrompt question={question} heading="h1" />
           <p className="q-diff">{DIFFICULTY_LABEL[question.difficulty]}</p>
           <div className="answer-wrap">
             <div className="lock-slot" aria-live="polite">

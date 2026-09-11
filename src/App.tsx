@@ -11,12 +11,13 @@ import { RandomQueue } from './components/RandomQueue'
 import { Result } from './components/Result'
 import { ThemeToggle } from './components/ThemeToggle'
 import { formatInvite, makeInviteToken, parseJoinHash, parsePartyHash, partyHash, playHash } from './lib/invite'
-import { closeDuelRoom, clearDuelHand, getDuelRoom } from './lib/onlineDuel'
+import { closeDuelRoom, clearDuelHand, getDuelRoom, openDuelRoom } from './lib/onlineDuel'
 import { closePartyRoom } from './lib/onlineParty'
 import { recordRankedResult } from './lib/leaderboard'
 import { saveDuelResult } from './lib/saveDuel'
 import { handleOrYou } from './lib/handle'
 import { saveBestScore, saveLastCategory, saveLastOpponent, getLastOpponent, getBestScore, getLastPace, saveLastPace } from './lib/storage'
+import { titleForScreen } from './lib/seo'
 import type { CategoryId, PaceMode, Screen } from './types'
 import './App.css'
 
@@ -66,6 +67,10 @@ function isPartyScreen(screen: Screen, code: string) {
 function App() {
   const [screen, setScreen] = useState<Screen>(initialScreen)
   const [matchKey, setMatchKey] = useState(0)
+
+  useEffect(() => {
+    document.title = titleForScreen(screen)
+  }, [screen])
 
   useEffect(() => {
     function onHash() {
@@ -180,10 +185,11 @@ function App() {
         pace={screen.pace}
         onCancel={goHome}
         onMatched={(match) => {
+          openDuelRoom(match.code)
           setPlayHash(match.code)
           setScreen({
             name: 'match',
-            categoryId: screen.categoryId,
+            categoryId: match.categoryId,
             opponent: {
               kind: 'online',
               roomId: match.code,
@@ -195,7 +201,7 @@ function App() {
               ranked: true,
               opponentId: match.opponentId,
             },
-            pace: screen.pace,
+            pace: match.pace,
           })
         }}
       />

@@ -1,0 +1,18 @@
+{
+  "name": "Quizline",
+  "short_name": "Quizline",
+  "description": "Timed live trivia vs friends, bots, and ranked randoms.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a0b16",
+  "theme_color": "#ff2d6a",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

@@ -4,7 +4,7 @@ import { getCategory } from '../data/questions'
 import { planBotAnswer } from '../lib/bot'
 import { dealMatch } from '../lib/deal'
 import { COUNTDOWN_MS, COUNTDOWN_SECONDS, DIFFICULTY_LABEL, MAX_MATCH_SCORE, MAX_QUESTION_SCORE, PACE_LABEL, QUESTIONS_PER_MATCH, secondsForPace, scoreAnswer } from '../lib/game'
-import { getDuelRoom } from '../lib/onlineDuel'
+import { openDuelRoom } from '../lib/onlineDuel'
 import { useAccount } from '../lib/AccountContext'
 import type { CategoryId, Opponent, PaceMode, PlayQuestion } from '../types'
 import { TOPIC_HUE } from '../lib/topics'
@@ -12,11 +12,14 @@ import { HalfGlow } from './HalfGlow'
 import { MatchCountdown } from './MatchCountdown'
 import { MatchTimer } from './MatchTimer'
 import { PlayerRail } from './PlayerRail'
+import { QuestionPrompt } from './QuestionPrompt'
+import { playSfx } from '../lib/sfx'
 
 type SideState = {
   picked: number | null
   score: number
   correct: number
+  streak: number
 }
 
 type Props = {
@@ -49,9 +52,10 @@ export function DuelMatch({ categoryId, opponent, pace = 'rapid', round = 0, goA
   const questionMs = secondsForPace(pace) * 1000
   const online = opponent.kind === 'online'
   const isHost = online && opponent.role === 'host'
+  const roomId = online ? opponent.roomId : ''
   const category = getCategory(categoryId)
   const bot = opponent.kind === 'bot' ? getBot(opponent.botId) : undefined
-  const room = online ? getDuelRoom() : null
+  const room = useMemo(() => (online && roomId ? openDuelRoom(roomId) : null), [online, roomId])
   const themName =
     opponent.kind === 'online'
       ? opponent.friendName || room?.friendName || 'Friend'
@@ -81,11 +85,11 @@ export function DuelMatch({ categoryId, opponent, pace = 'rapid', round = 0, goA
   const [countSec, setCountSec] = useState(COUNTDOWN_SECONDS)
   const [reveal, setReveal] = useState(previewReveal)
   const [friendGone, setFriendGone] = useState(false)
-  const [you, setYou] = useState<SideState>({ picked: null, score: 0, correct: 0 })
+  const [you, setYou] = useState<SideState>({ picked: null, score: 0, correct: 0, streak: 0 })
   const [them, setThem] = useState<SideState>(
     preview
-      ? { picked: 1, score: 240, correct: 1 }
-      : { picked: null, score: 0, correct: 0 },
+      ? { picked: 1, score: 240, correct: 1, streak: 1 }
+      : { picked: null, score: 0, correct: 0, streak: 0 },
   )
 
   const youRef = useRef(you)
@@ -119,6 +123,7 @@ export function DuelMatch({ categoryId, opponent, pace = 'rapid', round = 0, goA
       s: Math.max(0, Math.floor(remainingRef.current / 1000)),
       score: y.score,
       correct: y.correct,
+      streak: y.streak,
     })
   }
 
@@ -137,6 +142,7 @@ export function DuelMatch({ categoryId, opponent, pace = 'rapid', round = 0, goA
         picked: msg.c >= 0 ? msg.c : null,
         score: msg.score,
         correct: msg.correct ?? themRef.current.correct,
+        streak: msg.streak ?? themRef.current.streak,
       }
       themRef.current = next
       setThem(next)
@@ -155,11 +161,13 @@ export function DuelMatch({ categoryId, opponent, pace = 'rapid', round = 0, goA
     if (current.picked !== null) return
 
     const isCorrect = choiceIndex === currentQ.correctIndex
-    const gained = isCorrect ? scoreAnswer(remainingSeconds, currentQ.difficulty) : 0
+    if (side === 'you') playSfx(isCorrect ? 'correct' : 'wrong')
+    const gained = isCorrect ? scoreAnswer(remainingSeconds, current.streak, currentQ.difficulty) : 0
     const next: SideState = {
       picked: choiceIndex,
       score: current.score + gained,
       correct: current.correct + (isCorrect ? 1 : 0),
+      streak: isCorrect ? current.streak + 1 : 0,
     }
     if (side === 'you') {
       youRef.current = next
@@ -193,6 +201,17 @@ export function DuelMatch({ categoryId, opponent, pace = 'rapid', round = 0, goA
     if (resolvedRef.current) return
     resolvedRef.current = true
     setReveal(true)
+    if (!preview && youRef.current.picked === null) playSfx('wrong')
+    if (youRef.current.picked === null) {
+      const next = { ...youRef.current, streak: 0 }
+      youRef.current = next
+      setYou(next)
+    }
+    if (themRef.current.picked === null) {
+      const next = { ...themRef.current, streak: 0 }
+      themRef.current = next
+      setThem(next)
+    }
 
     if (preview) return
     if (online) publishYou()
@@ -443,7 +462,7 @@ export function DuelMatch({ categoryId, opponent, pace = 'rapid', round = 0, goA
 
         <section className="play-center">
           <MatchTimer remainingMs={remainingMs} totalMs={questionMs} />
-          <h1>{question.prompt}</h1>
+          <QuestionPrompt question={question} heading="h1" />
           <p className="q-diff">{DIFFICULTY_LABEL[question.difficulty]}</p>
           <div className="answer-wrap">
             <div className="lock-slot" aria-live="polite">

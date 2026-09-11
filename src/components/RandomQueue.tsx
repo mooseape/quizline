@@ -8,7 +8,17 @@ type Props = {
   categoryId: CategoryId
   pace: PaceMode
   onCancel: () => void
-  onMatched: (match: { code: string; role: 'host' | 'guest'; name: string; avatar?: string; photo?: string; frame?: string; opponentId: string }) => void
+  onMatched: (match: {
+    code: string
+    role: 'host' | 'guest'
+    name: string
+    avatar?: string
+    photo?: string
+    frame?: string
+    opponentId: string
+    categoryId: CategoryId
+    pace: PaceMode
+  }) => void
 }
 
 export function RandomQueue({ categoryId, pace, onCancel, onMatched }: Props) {
@@ -29,6 +39,8 @@ export function RandomQueue({ categoryId, pace, onCancel, onMatched }: Props) {
           photo: match.peer.photo,
           frame: match.peer.frame,
           opponentId: match.peer.userId,
+          categoryId: match.categoryId,
+          pace: match.pace,
         })
       })
       .catch((reason: unknown) => {
@@ -48,7 +60,9 @@ export function RandomQueue({ categoryId, pace, onCancel, onMatched }: Props) {
         <p className="hero-copy">
           {category?.name ?? 'Daily Mix'} · {PACE_LABEL[pace]} · {secondsForPace(pace)}s
         </p>
-        <p className={`duel-status${error ? '' : ' is-wait'}`}>{error || 'Waiting for someone else to press Play vs random…'}</p>
+        <p className={`duel-status${error ? '' : ' is-wait'}`}>
+          {error || 'Waiting for another signed-in player. Same pace is best; any topic can match.'}
+        </p>
         <button type="button" className="ghost duel-copy" onClick={onCancel}>
           Cancel
         </button>

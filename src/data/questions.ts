@@ -1,5 +1,6 @@
 import type { Category } from '../types'
 import { extraById } from './extraQuestions'
+import { flagQuestions } from './flagQuestions'
 
 export const categories: Category[] = [
   {
@@ -819,6 +820,12 @@ export const categories: Category[] = [
     name: 'Sports',
     blurb: 'Games, scores, and champions',
     questions: extraById.sports,
+  },
+  {
+    id: 'flags',
+    name: 'Flags',
+    blurb: 'Guess the country from its flag',
+    questions: flagQuestions,
   },
 ]
 
